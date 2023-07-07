@@ -1,9 +1,0 @@
-runtime: python39
-instance_class: F2
-
-entrypoint: gunicorn -b :$PORT main:app
-
-env_variables:
-  STRAVA_CLIENT_ID: 110278
-  STRAVA_CLIENT_SECRET: ebdaa1178f21f3b048572cd486d04f34d813b6d9
-  STRAVA_REFRESH_TOKEN: 6da5ac9c8113657ae3ac844877d4dbff9ec0bfb2

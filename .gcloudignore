@@ -20,7 +20,8 @@ __pycache__/
 .env
 notes.txt
 
-#anything working on
+#anything working or test
+test*
 working*
 
 # Python pycache:

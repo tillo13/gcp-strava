@@ -157,8 +157,10 @@ def exchange_token():
             # Now, depending on whether we already have tokens for this athlete in DB, either update or insert new record
             if existing_token_info:
                 current_time = int(time.time())
-                
-                # Check if current token is expired. If yes, update all tokens, else update only expires_in time
+                update_result = connection.execute(text("UPDATE strava_access_tokens SET total_refresh_checks = total_refresh_checks + 1 WHERE athlete_id = :athlete_id RETURNING total_refresh_checks"), {"athlete_id": athlete_id})
+                total_refresh_checks = update_result.fetchone()[0]
+
+                # If the access token is expired, refresh it and increment total_refreshes
                 if current_time > existing_token_info['expires_at']:
                     result = connection.execute(
                         text("""
@@ -167,7 +169,8 @@ def exchange_token():
                                 access_token=:access_token, 
                                 refresh_token=:refresh_token, 
                                 expires_at=:expires_at, 
-                                expires_in=:expires_in 
+                                expires_in=:expires_in,
+                                total_refreshes = total_refreshes + 1
                             WHERE athlete_id=:athlete_id
                             RETURNING pk_id
                         """),
@@ -181,6 +184,7 @@ def exchange_token():
                         }
                     )
                 else:
+                    # If the access token is not expired, only update the expires_in time
                     result = connection.execute(
                         text("""
                             UPDATE strava_access_tokens 
@@ -211,11 +215,14 @@ def exchange_token():
                     }
                 )
 
+                update_result = connection.execute(text("SELECT total_refresh_checks FROM strava_access_tokens WHERE athlete_id = :athlete_id"), {"athlete_id": athlete_id})
+                total_refresh_checks = update_result.fetchone()[0]
+
             # Fetch the primary key id of the row just inserted/updated
             pk_id = result.fetchone()[0]
-            
+
             # Add success message to the list of messages
-            messages.append(f'8. Save to Database: Success! pk_id = {pk_id}')
+            messages.append(f'8. Save to Database: Success! pk_id = {pk_id}, and total_refresh_checks={total_refresh_checks}')  
             
             # Now let's get some activities for the athlete
             messages.append(f'9. Let us go find some activities...')

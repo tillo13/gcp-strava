@@ -4,3 +4,4 @@ requests
 google-cloud-secret-manager
 psycopg2
 sqlalchemy
+python-dateutil

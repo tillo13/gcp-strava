@@ -1,5 +1,5 @@
 # Import necessary libraries
-from flask import Flask, request, redirect
+from flask import Flask, request, redirect, render_template
 from google.cloud import secretmanager
 import os
 import requests
@@ -9,6 +9,8 @@ import sqlalchemy
 from sqlalchemy import create_engine, text
 import logging
 import time
+import json
+from dateutil.parser import parse
 
 # Configure logging
 logging.basicConfig()
@@ -28,8 +30,8 @@ def get_secret_version(project_id, secret_id, version_id="latest"):
 GCP_PROJECT_ID = "97418787038"
 STRAVA_CLIENT_ID = "110278"
 REDIRECT_URL = "https://gcp-strava.wl.r.appspot.com/exchange_token"
-STRAVA_API_SECRET = "strava_client_secret"
-STRAVA_CLIENT_SECRET = get_secret_version(GCP_PROJECT_ID, STRAVA_API_SECRET)
+STRAVA_SECRET_API_ID = "strava_client_secret"
+STRAVA_CLIENT_SECRET = get_secret_version(GCP_PROJECT_ID, STRAVA_SECRET_API_ID)
 
 # Fetch database password from Google Cloud Secret Manager
 GOOGLE_SECRET_DB_ID = "gcp_strava_db_password"
@@ -75,7 +77,6 @@ def login():
     url = "https://www.strava.com/oauth/authorize"
     r = requests.Request('GET', url, params=params).prepare()
     return redirect(r.url)
-
 
 @app.route('/exchange_token', methods=['GET'])
 def exchange_token():
@@ -187,6 +188,43 @@ def exchange_token():
 
             pk_id = result.fetchone()[0]
             messages.append(f'8. Save to Database: Success! pk_id = {pk_id}')
+            # Getting activities
+            messages.append(f'9. Let us go find some activities...')
+            url = "https://www.strava.com/api/v3/athlete/activities"
+
+            headers = {
+                'Authorization': f'Bearer {access_token}'
+            }
+
+            params = {
+                'per_page': 13,  # Number of activities per page
+                'page': 1  # Page number
+            }
+
+            response = requests.get(url, headers=headers, params=params)
+
+            # check if the response is JSON
+            try:
+                activities = response.json()
+            except json.JSONDecodeError:
+                messages.append(f"Error decoding JSON response: {response.text}")
+                return '<br>'.join(messages)
+
+            # ensure the activities object is a list
+            if not isinstance(activities, list):
+                messages.append(f"Unexpected API response: {activities}")
+                return '<br>'.join(messages)
+
+            # Print activities
+            messages.append('----------ACTIVITIES-----')
+            for num, activity in enumerate(activities, 1):
+                date = parse(activity['start_date_local'])  # parses to datetime
+                formatted_date = date.strftime('%Y-%m-%d %H:%M:%S')  # to your preferred string format
+                distance = activity.get('distance', 'N/A')
+                moving_time = activity.get('moving_time', 'N/A')
+                average_speed = activity.get('average_speed', 'N/A')
+                type_ = activity.get('type', 'N/A')
+                messages.append(f"Activity {num}: {formatted_date} : {activity['name']} | Distance: {distance} meters | Moving Time: {moving_time // 60} minutes and {moving_time % 60} seconds | Average Speed: {average_speed} m/s | Type: {type_}")
 
     except requests.exceptions.Timeout:
         return 'The request timed out, please try again later.'

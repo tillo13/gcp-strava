@@ -35,30 +35,34 @@ STRAVA_CLIENT_SECRET = get_secret_version(GCP_PROJECT_ID, STRAVA_API_SECRET)
 GOOGLE_SECRET_DB_ID = "gcp_strava_db_password"
 DB_PASSWORD = get_secret_version(GCP_PROJECT_ID, GOOGLE_SECRET_DB_ID)
 
-# Function to create connection to the database
+
+# Function to create a connection to the database
 def create_conn():
-    db_user = 'postgres'
-    db_pass = DB_PASSWORD
-    db_name = 'gcp_strava_data' 
-    cloud_sql_connection_name = 'gcp-strava:us-central1:gcp-default'
+    try:
+        db_user = 'postgres'
+        db_pass = DB_PASSWORD
+        db_name = 'gcp_strava_data' 
+        cloud_sql_connection_name = 'gcp-strava:us-central1:gcp-default'
 
-    engine = sqlalchemy.create_engine(
-        sqlalchemy.engine.url.URL.create(
-            drivername="postgresql+psycopg2",
-            username=db_user,
-            password=db_pass,
-            database=db_name,
-            host=f'/cloudsql/{cloud_sql_connection_name}',
-        ),
-    )
-    return engine
+        engine = sqlalchemy.create_engine(
+            sqlalchemy.engine.url.URL.create(
+                drivername="postgresql+psycopg2",
+                username=db_user,
+                password=db_pass,
+                database=db_name,
+                host=f'/cloudsql/{cloud_sql_connection_name}',
+            ),
+        )
+        return engine
+    except OperationalError:
+        return 'Unable to connect to the database, please try again later.'
 
-# Home route, redirects users to the login page
+
 @app.route('/', methods=['GET', 'POST'])
 def home():
     return '<a href="/login">Login with Strava</a>'
 
-# Login route, initiates the OAuth process with Strava
+
 @app.route('/login', methods=['GET'])
 def login():
     params = {
@@ -72,99 +76,73 @@ def login():
     r = requests.Request('GET', url, params=params).prepare()
     return redirect(r.url)
 
-# Route for handling token exchange with Strava, also handles storing token details in the database
+
 @app.route('/exchange_token', methods=['GET'])
 def exchange_token():
-    start_time = time.time()  # Measure execution time of this request
-    code = request.args.get('code')
+    start_time = time.time()
     messages = []
     
-    if code:
-        try:
-            # Step 1: Exchange code for tokens
-            url = "https://www.strava.com/oauth/token"
-            payload = {
-                'client_id': STRAVA_CLIENT_ID,
-                'client_secret': STRAVA_CLIENT_SECRET,
-                'code': code,
-                'grant_type': 'authorization_code'
-            }
-            response = requests.post(url, params=payload)
-            response.raise_for_status()  # Raise an exception if the request was not successful
-            data = response.json()
+    try:
+        code = request.args.get('code')
 
-            # Store tokens and other data
-            access_token = data['access_token']
-            refresh_token = data['refresh_token']
-            expires_at = data['expires_at']
-            athlete_id = data['athlete']['id']
-            expires_in = data['expires_in']
+        if not code or not isinstance(code, str):
+            return "Invalid 'code' supplied"
 
-            #append the values to the output message at the end.
-            messages.append('2. Token Exchange (strava.com/oauth/token): Success!')
-            messages.append(f'3. Athlete_ID ({athlete_id}): Success!')
-            messages.append(f'4. Token expires: {expires_at}')
-            messages.append(f'5. Access Token: {access_token}')
-            messages.append(f'6. Refresh Token: {refresh_token}')
+        url = "https://www.strava.com/oauth/token"
+        payload = {
+            'client_id': STRAVA_CLIENT_ID,
+            'client_secret': STRAVA_CLIENT_SECRET,
+            'code': code,
+            'grant_type': 'authorization_code'
+        }
+        response = requests.post(url, params=payload, timeout=10)
 
-            # Step 2: Store tokens in the database
-            messages.append('7. Save to Database: Attempting...')
-            engine = create_conn()
-            with engine.begin() as connection:
-                # Check if a record for this athlete_id already exists
-                result = connection.execute(
-                    text("SELECT * FROM strava_access_tokens WHERE athlete_id = :athlete_id"),
-                    {"athlete_id": athlete_id}
-                )
-                row = result.fetchone()
-                existing_token_info = row._asdict() if row else None
+        # check status code
+        if response.status_code == 429:
+            return 'You have exceeded your request limit, please try again later.'
 
-                if existing_token_info:
-                    # If a record exists, update it
-                    current_time = int(time.time())
-                    if current_time > existing_token_info['expires_at']:
-                        # If token is expired, update all fields
-                        result = connection.execute(
-                            text("""
-                                UPDATE strava_access_tokens 
-                                SET client_id=:client_id, 
-                                    access_token=:access_token, 
-                                    refresh_token=:refresh_token, 
-                                    expires_at=:expires_at, 
-                                    expires_in=:expires_in 
-                                WHERE athlete_id=:athlete_id
-                                RETURNING pk_id
-                            """),
-                            {
-                                "client_id": STRAVA_CLIENT_ID,
-                                "athlete_id": athlete_id,
-                                "access_token": access_token,
-                                "refresh_token": refresh_token,
-                                "expires_at": expires_at,
-                                "expires_in": expires_in
-                            }
-                        )
-                    else:
-                        # If token is not expired, only update 'expires_in' and 'last_updated'
-                        result = connection.execute(
-                            text("""
-                                UPDATE strava_access_tokens 
-                                SET expires_in=:expires_in, 
-                                    last_updated=now() 
-                                WHERE athlete_id=:athlete_id
-                                RETURNING pk_id
-                            """),
-                            {
-                                "athlete_id": athlete_id,
-                                "expires_in": expires_in
-                            }
-                        )
-                else:
-                    # If no record exists, insert a new one
+        response.raise_for_status()
+
+        data = response.json() 
+        messages.append('1. Connect to Strava authorize (strava.com/oauth/authorize): Success!')
+
+        # Store tokens and other data
+        access_token = data['access_token']
+        refresh_token = data['refresh_token']
+        expires_at = data['expires_at']
+        athlete_id = data['athlete']['id']
+        expires_in = data['expires_in']
+
+        messages.append('2. Token Exchange (strava.com/oauth/token): Success!')
+        messages.append(f'3. Athlete_ID ({athlete_id}): Success!')
+        messages.append(f'4. Token expires: {expires_at}')
+        messages.append(f'5. Access Token: {access_token}')
+        messages.append(f'6. Refresh Token: {refresh_token}')
+
+        messages.append('7. Save to Database: Attempting...')
+        engine = create_conn()
+        if isinstance(engine, str):  # Forward potential DB error messages
+            return engine
+        with engine.begin() as connection:
+            result = connection.execute(
+                text("SELECT * FROM strava_access_tokens WHERE athlete_id = :athlete_id"),
+                {"athlete_id": athlete_id}
+            )
+            row = result.fetchone()
+            existing_token_info = row._asdict() if row else None
+
+            if existing_token_info:
+                current_time = int(time.time())
+                if current_time > existing_token_info['expires_at']:
                     result = connection.execute(
                         text("""
-                            INSERT INTO strava_access_tokens (client_id, athlete_id, access_token, refresh_token, expires_at, expires_in)
-                            VALUES (:client_id, :athlete_id, :access_token, :refresh_token, :expires_at, :expires_in)
+                            UPDATE strava_access_tokens 
+                            SET client_id=:client_id, 
+                                access_token=:access_token, 
+                                refresh_token=:refresh_token, 
+                                expires_at=:expires_at, 
+                                expires_in=:expires_in 
+                            WHERE athlete_id=:athlete_id
                             RETURNING pk_id
                         """),
                         {
@@ -176,25 +154,55 @@ def exchange_token():
                             "expires_in": expires_in
                         }
                     )
+                else:
+                    result = connection.execute(
+                        text("""
+                            UPDATE strava_access_tokens 
+                            SET expires_in=:expires_in, 
+                                last_updated=now() 
+                            WHERE athlete_id=:athlete_id
+                            RETURNING pk_id
+                        """),
+                        {
+                            "athlete_id": athlete_id,
+                            "expires_in": expires_in
+                        }
+                    )
+            else:
+                result = connection.execute(
+                    text("""
+                        INSERT INTO strava_access_tokens (client_id, athlete_id, access_token, refresh_token, expires_at, expires_in)
+                        VALUES (:client_id, :athlete_id, :access_token, :refresh_token, :expires_at, :expires_in)
+                        RETURNING pk_id
+                    """),
+                    {
+                        "client_id": STRAVA_CLIENT_ID,
+                        "athlete_id": athlete_id,
+                        "access_token": access_token,
+                        "refresh_token": refresh_token,
+                        "expires_at": expires_at,
+                        "expires_in": expires_in
+                    }
+                )
 
-                pk_id = result.fetchone()[0]
-                messages.append(f'8. Save to Database: Success! pk_id = {pk_id}')
-            
-        except requests.exceptions.RequestException as err:
-            messages.append(f'Request Failed: {err}')
-            logging.error(f'Request Failed: {err}')
-        
-        except Exception as e:
-            messages.append(f'Unexpected Error: {e}')
-            logging.error(f'Unexpected Error: {e}')
-        
-        finally:
-            roundtrip_time = round(time.time() - start_time, 3)
-            messages.append(f'From login to now: {roundtrip_time} seconds.')
-            messages.append('<br><a href="https://gcp-strava.wl.r.appspot.com/">Try again?</a>')
-            return '<br>'.join(messages)
-    
-    return 'Uh oh, an error occurred when trying to get the token.'
+            pk_id = result.fetchone()[0]
+            messages.append(f'8. Save to Database: Success! pk_id = {pk_id}')
+
+    except requests.exceptions.Timeout:
+        return 'The request timed out, please try again later.'
+
+    except requests.exceptions.RequestException as e:
+        return f'An error occurred while processing your request: {str(e)}'
+
+    except psycopg2.OperationalError as ex:
+        return f'Database connection error: {str(ex)}'
+
+    finally:
+        roundtrip_time = round(time.time() - start_time, 3)
+        messages.append(f'From login to now: {roundtrip_time} seconds.')
+        messages.append('<br><a href="https://gcp-strava.wl.r.appspot.com/">Try again?</a>')
+        return '<br>'.join(messages)
+
 
 if __name__ == "__main__":
     app.run(debug=True)

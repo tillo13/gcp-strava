@@ -11,6 +11,7 @@ import json                                                            # For han
 from dateutil.parser import parse                                      # For parsing dates and times from stings 
 
 from psycopg2 import OperationalError
+from working_chatgpt_utils import get_fact_for_distance #change from working to prod when ready
 
 # Configures logging to information level which will display detailed logs
 logging.basicConfig()
@@ -65,18 +66,38 @@ def create_conn():
 # Home endpoint to serve the login link for Strava
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    return '<a href="/login">Login with Strava</a>'
 
+    message = ("Welcome! By clicking the button below, you'll be redirected to Strava's site to log in. "
+          "Once you're authenticated by Strava, you'll be brought back here. "
+          "We'll fetch your most recent activity data from Strava, pass the distance to chatGPT, and provide some fun interesting facts. "
+          "Not saving any of the data from the query, it's all stateless in this demo.")
+
+    if request.method == 'POST':
+        model_choice = request.form.get('model_choice')
+        return redirect(f'/login?model_choice={model_choice}')
+    
+    # Fix the line below by using regular string, not f-string
+    return '''
+        {message}
+        <form method="POST">
+            <input type="radio" name="model_choice" value="gpt-3.5-turbo">gpt-3.5-turbo (slower, but better results)<br>
+            <input type="radio" name="model_choice" value="text-davinci-003" checked>text-davinci-003 (faster but not as good results)<br><br>
+            <input type="submit" value="Submit" formaction="/"><img src="https://storage.googleapis.com/gcp-strava.appspot.com/btn_strava_connectwith_orange%402x.png" alt="Connect with Strava"></input>
+        </form>
+    '''.format(message=message) # We used the format method to replace {message}
+        
 # Login endpoint to redirect users to the Stava login page
 @app.route('/login', methods=['GET'])
 def login():
+    model_choice=request.args.get('model_choice')
+
     params = {
         "client_id": STRAVA_CLIENT_ID,
         "response_type": "code",
-        "redirect_uri": REDIRECT_URL,
+        "redirect_uri": f"{REDIRECT_URL}?model_choice={model_choice}",
         "approval_prompt": "force",
         "scope": "read_all,profile:read_all,activity:read_all,activity:write"
-    }
+    } 
     url = "https://www.strava.com/oauth/authorize"
     r = requests.Request('GET', url, params=params).prepare()
     return redirect(r.url)
@@ -86,7 +107,10 @@ def login():
 @app.route('/exchange_token', methods=['GET'])
 def exchange_token():
     start_time = time.time()
+    model_choice=request.args.get('model_choice')
     messages = []
+    error_message = None # Initialize an error message variable
+
 
     #########################
     #   Extracting 'code' from request arguments
@@ -99,6 +123,9 @@ def exchange_token():
             return "Invalid 'code' supplied"
 
         # Stava API endpoint for exchanging code with refresh and access token.
+        # Additional timestamps before each stage
+        strava_auth_start = time.time()
+
         url = "https://www.strava.com/oauth/token"
         payload = {
             'client_id': STRAVA_CLIENT_ID,
@@ -116,7 +143,8 @@ def exchange_token():
         response.raise_for_status()
 
         # Parsing JSON response data 
-        data = response.json() 
+        data = response.json()
+        messages.append('----------AUTH TO STRAVA CHECK----------') 
         messages.append('1. Connect to Stava authorize (strava.com/oauth/authorize): Success!')
 
         # Store access and refresh tokens and other user details in variables
@@ -133,9 +161,17 @@ def exchange_token():
         messages.append(f'5. Access Token: {access_token}')
         messages.append(f'6. Refresh Token: {refresh_token}')
 
+        # Timestamp right after Strava authorization
+        strava_auth_end = time.time()
+        # Store Strava interaction time in a variable
+        strava_time = strava_auth_end - strava_auth_start
+
         # Attempt to save tokens and user details in database
         messages.append('7. Save to Database: Attempting...')
 
+        # Timestamp before database process starts
+        db_start = time.time() 
+        
         # Create database engine
         engine = create_conn()
         if isinstance(engine, str):     # If could not create engine (error message is returned), return the engine error message
@@ -222,6 +258,10 @@ def exchange_token():
             pk_id = result.fetchone()[0]
 
             # Add success message to the list of messages
+            # Timestamp right after database process
+            db_end = time.time()
+            # Store DB operation time in a variable.
+            db_time = db_end - db_start
             messages.append(f'8. Save to Database: Success! pk_id = {pk_id}, and total_refresh_checks={total_refresh_checks}')  
             
             # Now let's get some activities for the athlete
@@ -235,7 +275,7 @@ def exchange_token():
 
             # Define the parameters for the request. Here we limit the number of results and specify the page number.
             params = {
-                'per_page': 13,  # Number of activities per page
+                'per_page': 1,  # Number of activities per page
                 'page': 1  # Page number
             }
 
@@ -256,7 +296,7 @@ def exchange_token():
                 return '<br>'.join(messages)
 
             # Once we have the response, we can go through each activity and print the details
-            messages.append('----------ACTIVITIES-----')
+            messages.append('----------STRAVA ACTIVITIES----------')
             for num, activity in enumerate(activities, 1):
                 date = parse(activity['start_date_local'])  # parses to datetime
                 formatted_date = date.strftime('%Y-%m-%d %H:%M:%S')  # to your preferred string format
@@ -265,6 +305,17 @@ def exchange_token():
                 average_speed = activity.get('average_speed', 'N/A')
                 type_ = activity.get('type', 'N/A')
                 messages.append(f"Activity {num}: {formatted_date} : {activity['name']} | Distance: {distance} meters | Moving Time: {moving_time // 60} minutes and {moving_time % 60} seconds | Average Speed: {average_speed} m/s | Type: {type_}")
+                messages.append(f'<span style="color:green">----------chatGPT INTEGRATION----------</span>')
+                
+                # Timestamp before ChatGPT interaction starts
+                chatgpt_start = time.time()  
+                #gpt3_fact = get_fact_for_distance(distance, model_choice)
+                model, fact = get_fact_for_distance(distance)
+                # Timestamp after ChatGPT operation completes.
+                chatgpt_end = time.time()   
+                messages.append(f"{model.capitalize()} fact: {fact}")
+                # Store ChatGPT interaction time in a variable.
+                chatgpt_time = chatgpt_end - chatgpt_start
 
     except requests.exceptions.Timeout:
         # If the request to Strava API times out
@@ -278,14 +329,26 @@ def exchange_token():
         # If there was an issue with the SQL
         return f'Database connection error: {str(ex)}'
 
-    finally:
-        # Calculate time taken for the whole process
-        roundtrip_time = round(time.time() - start_time, 3)
-        messages.append(f'From login to now: {roundtrip_time} seconds.')
-        messages.append('<br><a href="https://gcp-strava.wl.r.appspot.com/">Try again?</a>')
-        # Return all messages in one string
-        return '<br>'.join(messages)
+        # Can get more specific if we find a need..
+    except Exception as e:
+        error_message = str(e) # If an error occurs, store the error message
 
+    finally:
+        # Add logging only if there was no error previously
+        if not error_message:
+            # Calculate time taken for the whole process
+            roundtrip_time = time.time() - start_time
+            messages.append('----------LOGGING VALUES----------')
+            messages.append(f'From login to now: {round(time.time() - start_time, 3)} seconds.')
+            # Add here Strava interaction time
+            messages.append(f'Strava interaction: {round(strava_time, 3)} seconds.')
+            # Add here GCP operation time
+            messages.append(f'GCP database interaction: {round(db_time, 3)} seconds.')
+            messages.append(f'ChatGPT interaction: {round(chatgpt_time, 3)} seconds.')
+            messages.append('<br><a href="https://gcp-strava.wl.r.appspot.com/">Try again?</a>')
+            return '<br>'.join(messages)
+        else:
+            return error_message
 
 if __name__ == "__main__":
     # Allows us to run a development server and debug our application

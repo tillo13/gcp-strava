@@ -18,6 +18,10 @@
 __pycache__/
 /setup.cfg
 .env
+notes.txt
+
+#anything working on
+working*
 
 # Python pycache:
 __pycache__/

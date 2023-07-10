@@ -1,6 +1,5 @@
-# Begin by importing necessary third-party libraries
+# 2023july10
 from flask import Flask, request, redirect, Markup, render_template                            # Flask for building web application
-                              # For managing secrets in Google Cloud platform
 import requests                                                        # For making HTTP requests to Stava API
 import psycopg2                                                        # PostgresSQL library for handling database operations
 import sqlalchemy
@@ -9,11 +8,14 @@ import logging                                                         # For log
 import time                                                             # to calculate and display time-based information
 import json                                                            # For handling JSON data
 from dateutil.parser import parse                                      # For parsing dates and times from stings 
-
 from psycopg2 import OperationalError
+
+#import code from existing .py code in the app:
 from chatgpt_utils import get_fact_for_distance, get_chatgpt_fact
 from secrets_manager import get_secret_version
-
+import strava_utils
+from config import GCP_PROJECT_ID, STRAVA_CLIENT_ID, REDIRECT_URL, STRAVA_CLIENT_SECRET, DB_USER,DB_PASSWORD, DB_NAME, CLOUD_SQL_CONNECTION_NAME, OPENAI_SECRET_KEY
+from db_utils import create_conn
 
 # Configures logging to information level which will display detailed logs
 logging.basicConfig()
@@ -22,50 +24,10 @@ logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 # An instance of Flask is our WSGI (Web Server Gateway Interface) application.
 app = Flask(__name__)
 
-# Configurations for Stava API and Google Cloud
-GCP_PROJECT_ID = "97418787038"                                        # Google Cloud Project ID
-STRAVA_CLIENT_ID = "110278"                                           # Strava API client ID
-REDIRECT_URL = "https://gcp-strava.wl.r.appspot.com/exchange_token"   # Redirect URL is where users redirect after Stava login
-STRAVA_SECRET_API_ID = "strava_client_secret"                         # Stava API secret ID is used to access Stava API
-STRAVA_CLIENT_SECRET = get_secret_version(GCP_PROJECT_ID, STRAVA_SECRET_API_ID)  
-
-# Storing DB credentials securely in secrets 
-GOOGLE_SECRET_DB_ID = "gcp_strava_db_password"
-DB_PASSWORD = get_secret_version(GCP_PROJECT_ID, GOOGLE_SECRET_DB_ID)  
-
-#storing OPENAI key in google secret
-OPENAI_API_KEY_ID = "OPENAI_API_KEY"
-OPENAI_SECRET_KEY = get_secret_version(GCP_PROJECT_ID, OPENAI_API_KEY_ID)
-
-# The function to create connection with the PostgreSQL database.
-def create_conn():
-    try:
-        db_user = 'postgres'
-        db_pass = DB_PASSWORD
-        db_name = 'gcp_strava_data' 
-        cloud_sql_connection_name = 'gcp-strava:us-central1:gcp-default'
-
-        #########################
-        #   Creating engine for connecting PostgreSQL database
-        #########################
-        engine = sqlalchemy.create_engine(
-            sqlalchemy.engine.url.URL.create(
-                drivername="postgresql+psycopg2",
-                username=db_user,
-                password=db_pass,
-                database=db_name,
-                host=f'/cloudsql/{cloud_sql_connection_name}',
-            ),
-        )
-        return engine                                      # Return connection engine
-    except OperationalError:
-        return 'Unable to connect to the database, please try again later.'                
-
 # Home endpoint to serve the login link for Strava
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    message = ("Once you're authenticated by Strava, we'll fetch your most recent activity data from Strava, "
-               "pass the distance to chatGPT, and provide some fun and interesting distance-related facts. "
+    message = ("We'll grab your most recent activity data from Strava,pass the distance to chatGPT, and provide some fun distance-related facts. "
                "We don't save any of the data from the query; it's all stateless in this demo. "
                "This also means you'll most likely get a brand new fact each time.")
 
@@ -107,10 +69,9 @@ def exchange_token():
         
         if error == 'access_denied':
             return 'For the app to work, you have to allow us to see the data. <a href="/">Try again?</a>'
-
-    #########################
-    #   Extracting 'code' from request arguments
-    #########################
+    
+    # Start the timer for Strava
+    strava_auth_start = time.time()
     try:
         code = request.args.get('code')
 
@@ -118,38 +79,27 @@ def exchange_token():
         if not code or not isinstance(code, str):
             return "Invalid 'code' supplied"
 
-        # Stava API endpoint for exchanging code with refresh and access token.
-        # Additional timestamps before each stage
-        strava_auth_start = time.time()
+        # Process the 'code' to get access and refresh tokens
+        try:
+            data = strava_utils.process_auth_code(STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, code)
+        except requests.exceptions.RequestException as e:
+            return f'Error occurred while processing the code: {str(e)}'
 
-        url = "https://www.strava.com/oauth/token"
-        payload = {
-            'client_id': STRAVA_CLIENT_ID,
-            'client_secret': STRAVA_CLIENT_SECRET,
-            'code': code,
-            'grant_type': 'authorization_code'
-        }
+        # check if "code" processing was successful
+        if "access_token" not in data:
+            return 'Unable to process the code, please try again later.'
 
-        # Making a POST request to Stava API to exchange auth code
-        response = requests.post(url, params=payload, timeout=10)
-
-        if response.status_code == 429:
-            return 'You have exceeded your request limit, please try again later.'
-
-        response.raise_for_status()
-
-        # Parsing JSON response data 
-        data = response.json()
-        messages.append('---AUTH TO STRAVA CHECK---') 
-        messages.append('1. Connect to Stava authorize (strava.com/oauth/authorize): Success!')
-
-        # Store access and refresh tokens and other user details in variables
         access_token = data['access_token']
         refresh_token = data['refresh_token']
         expires_at = data['expires_at']
         athlete_id = data['athlete']['id']
         expires_in = data['expires_in']
 
+        # Timestamp right after Strava authorization
+        strava_auth_end = time.time()
+        # Store Strava interaction time in a variable
+        strava_time = strava_auth_end - strava_auth_start
+        
         # Add token exchange message to the list of messages
         messages.append('2. Token Exchange (strava.com/oauth/token): Success!')
         messages.append(f'3. Athlete_ID ({athlete_id}): Success!')
@@ -262,33 +212,12 @@ def exchange_token():
             
             # Now let's get some activities for the athlete
             messages.append('9. Let us go find some activities...')
-            url = "https://www.strava.com/api/v3/athlete/activities"
-
-            # Set up the auth headers with the access token
-            headers = {
-                'Authorization': f'Bearer {access_token}'
-            }
-
-            # Define the parameters for the request. Here we limit the number of results and specify the page number.
-            params = {
-                'per_page': 1,  # Number of activities per page
-                'page': 1  # Page number
-            }
-
-            # Make the request to the Strava API
-            response = requests.get(url, headers=headers, params=params)
-
-            # Try to decode the JSON response
+            # fetch the activities
             try:
-                activities = response.json()
-            except json.JSONDecodeError:
-                # Add error message to the list of messages if we fail to decode the JSON
-                messages.append(f"Error decoding JSON response: {response.text}")
-                return '<br>'.join(messages)
-
-            # Ensure the activities object is a list
-            if not isinstance(activities, list):
-                messages.append(f"Unexpected API response: {activities}")
+                activities = strava_utils.get_activities(access_token)
+            except Exception as e:
+                # Handle any exceptions that arise from fetching the activities
+                messages.append(f"Error occurred while fetching activities: {str(e)}")
                 return '<br>'.join(messages)
 
             # Once we have the response, we can go through each activity and print the details
@@ -349,7 +278,6 @@ def exchange_token():
             
         else:
             return error_message
-
 
 if __name__ == "__main__":
     # Allows us to run a development server and debug our application

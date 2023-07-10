@@ -9,6 +9,16 @@
             padding-top: 5px;   /* Adjust these values as required */
             padding-bottom: 2px;
         }
+        footer {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  background-color: #f8f9fa; /* light gray */
+  color: black;
+  text-align: center;
+  padding: 10px;
+}
     </style>
 </head>
 <body>
@@ -19,5 +29,11 @@
     <div class="container mt-5">
         {% block content %}{% endblock %}
     </div>
+    <footer class="footer">
+        <div class="container">
+          <span class="text-muted">&copy; Tillo2023 - Strava+chatGPT - All rights reserved.</span>
+          <!-- Add a navigation bar or other details here -->
+        </div>
+      </footer>
 </body>
 </html>

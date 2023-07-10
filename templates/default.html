@@ -5,20 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
-        .navbar {   /* Add your custom style class */
-            padding-top: 5px;   /* Adjust these values as required */
+        html, body {
+            height: 100%;
+        }
+        body {
+            position: relative;
+        }
+        .navbar {   
+            padding-top: 5px;   
             padding-bottom: 2px;
         }
-        footer {
-  position: fixed;
-  left: 0;
-  bottom: 0;
-  width: 100%;
-  background-color: #f8f9fa; /* light gray */
-  color: black;
-  text-align: center;
-  padding: 10px;
-}
+        .footer {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background-color: #f8f9fa; 
+            color: black;
+            text-align: right;
+            font-size: 12px;
+            padding: 10px;
+        }
     </style>
 </head>
 <body>
@@ -30,10 +36,17 @@
         {% block content %}{% endblock %}
     </div>
     <footer class="footer">
-        <div class="container">
-          <span class="text-muted">&copy; Tillo2023 - Strava+chatGPT - All rights reserved.</span>
-          <!-- Add a navigation bar or other details here -->
-        </div>
-      </footer>
+       <div class="container" style="font-size: 12px; text-align: right;">
+           <p id="datetime">&copy; Tillo2023 - Strava+chatGPT - All rights reserved.</p>
+           <!-- Add a navigation bar or other details here -->
+       </div>
+    </footer>
+    
+    <!-- JavaScript to get client date and time -->
+    <script>
+        var now = new Date();
+        var options = {'year': 'numeric', 'month': 'long', 'day': 'numeric', 'hour': 'numeric', 'minute': 'numeric', 'second': 'numeric'};
+        document.getElementById('datetime').innerText += "  " + now.toLocaleDateString("en-US", options);
+    </script>
 </body>
 </html>

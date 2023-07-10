@@ -29,13 +29,14 @@ def process_auth_code(client_id, client_secret, code):
         'grant_type': 'authorization_code'
     }
 
-    # Making a POST request to Stava API to exchange auth code
+    # Making a POST request to Strava API to exchange auth code
     response = requests.post(url, params=payload)
-
-    # Throw an exception if the response from Strava was not successful
-    response.raise_for_status()
 
     # Parsing JSON response data
     data = response.json()
+
+    # Check if the request was successful
+    if response.status_code != 200:
+        raise requests.exceptions.RequestException(data)
 
     return data

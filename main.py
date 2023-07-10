@@ -1,5 +1,5 @@
-# 2023july10
-from flask import Flask, request, redirect, Markup, render_template                            # Flask for building web application
+# 2023july10-802
+from flask import Flask, request, redirect, Markup, render_template, redirect, url_for, session  # Flask for building web application
 import requests                                                        # For making HTTP requests to Stava API
 import psycopg2                                                        # PostgresSQL library for handling database operations
 import sqlalchemy
@@ -14,7 +14,7 @@ from psycopg2 import OperationalError
 from chatgpt_utils import get_fact_for_distance, get_chatgpt_fact
 from secrets_manager import get_secret_version
 import strava_utils
-from config import GCP_PROJECT_ID, STRAVA_CLIENT_ID, REDIRECT_URL, STRAVA_CLIENT_SECRET, DB_USER,DB_PASSWORD, DB_NAME, CLOUD_SQL_CONNECTION_NAME, OPENAI_SECRET_KEY
+from config import SITE_HOMEPAGE,GCP_PROJECT_ID, STRAVA_CLIENT_ID, REDIRECT_URL, STRAVA_CLIENT_SECRET, DB_USER,DB_PASSWORD, DB_NAME, CLOUD_SQL_CONNECTION_NAME, OPENAI_SECRET_KEY
 from db_utils import create_conn, save_token_info
 import db_utils
 
@@ -24,11 +24,15 @@ logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 # An instance of Flask is our WSGI (Web Server Gateway Interface) application.
 app = Flask(__name__)
+app.secret_key = 'super duper secret key'  # super duper secret cause Flask wants it
+@app.errorhandler(500)
+def internal_error(error):
+    return redirect(SITE_HOMEPAGE)
 
 # Home endpoint to serve the login link for Strava
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    message = ("We'll grab your most recent activity data from Strava,pass the distance to chatGPT, and provide some fun distance-related facts. "
+    message = ("We'll grab your most recent activity data from Strava, pass the distance to chatGPT, and provide some fun distance-related facts. "
                "We don't save any of the data from the query; it's all stateless in this demo. "
                "This also means you'll most likely get a brand new fact each time.")
 
@@ -84,12 +88,27 @@ def exchange_token():
         try:
             data = strava_utils.process_auth_code(STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, code)
         except requests.exceptions.RequestException as e:
-            return f'Error occurred while processing the code: {str(e)}'
+            return f"Error occurred while processing the code: {str(e)}."
 
         # check if "code" processing was successful
         if "access_token" not in data:
-            return 'Unable to process the code, please try again later.'
+            return render_template('error.html', message="We couldn't process your request with the permissions provided. <br>Please start again and provide the necessary permissions.")
 
+        # Get scope from the arguments
+        scope = request.args.get('scope')
+
+        # Add explicit checks for each expected permission
+        required_permissions = ['read', 'profile:read_all', 'activity:read_all', 'activity:write']
+        granted_permissions = scope.split(',')
+
+        # Check for missing permissions and return an appropriate error message if any are missing
+        missing_permissions = [permission for permission in required_permissions if permission not in granted_permissions]
+
+        if missing_permissions:
+            error_message = "The following permissions were not granted so we can't query your profile: " + ', '.join(missing_permissions)
+            error_message = Markup(f"{error_message}. <br><a href='/'>Please start again</a> and provide the necessary permissions.")
+            return render_template('error.html', message=error_message)
+        
         access_token = data['access_token']
         refresh_token = data['refresh_token']
         expires_at = data['expires_at']
@@ -172,15 +191,11 @@ def exchange_token():
 
     except requests.exceptions.RequestException as e:
         # If there was some other issue with the request
-        return f'An error occurred while processing your request: {str(e)}'
+        return redirect(url_for('home')) 
 
     except psycopg2.OperationalError as ex:
         # If there was an issue with the SQL
         return f'Database connection error: {str(ex)}'
-
-        # Can get more specific if we find a need..
-    except Exception as e:
-        error_message = str(e) # If an error occurs, store the error message
 
 
     finally:

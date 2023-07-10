@@ -2,6 +2,7 @@
 from secrets_manager import get_secret_version
 
 GCP_PROJECT_ID = "97418787038"
+SITE_HOMEPAGE = "https://gcp-strava.wl.r.appspot.com/"
 
 # Strava API Configurations
 STRAVA_CLIENT_ID = "110278"

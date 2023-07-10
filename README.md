@@ -23,7 +23,7 @@ These keys are fetched using the `get_secret_version` function in our `main.py`.
 
 We fetch the client secret for Strava and the database password from the Secret Manager in `main.py`.
 
-## PostgreSQL Connection
+## Google SQL/PostgreSQL
 
 PostgreSQL is used as the database to store user information and tokens. We're utilizing Google Cloud's Cloud SQL for this project. Google Cloud SQL is a fully-managed database service that makes it easy to set up and administer relational PostgreSQL databases on Google Cloud Platform. 
 

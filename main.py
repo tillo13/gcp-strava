@@ -1,5 +1,5 @@
 # Begin by importing necessary third-party libraries
-from flask import Flask, request, redirect                             # Flask for building web application
+from flask import Flask, request, redirect, Markup, render_template                            # Flask for building web application
 from google.cloud import secretmanager                                 # For managing secrets in Google Cloud platform
 import requests                                                        # For making HTTP requests to Stava API
 import psycopg2                                                        # PostgresSQL library for handling database operations
@@ -11,7 +11,7 @@ import json                                                            # For han
 from dateutil.parser import parse                                      # For parsing dates and times from stings 
 
 from psycopg2 import OperationalError
-from working_chatgpt_utils import get_fact_for_distance #change from working to prod when ready
+from chatgpt_utils import get_fact_for_distance 
 
 # Configures logging to information level which will display detailed logs
 logging.basicConfig()
@@ -35,9 +35,13 @@ REDIRECT_URL = "https://gcp-strava.wl.r.appspot.com/exchange_token"   # Redirect
 STRAVA_SECRET_API_ID = "strava_client_secret"                         # Stava API secret ID is used to access Stava API
 STRAVA_CLIENT_SECRET = get_secret_version(GCP_PROJECT_ID, STRAVA_SECRET_API_ID)  
 
-# Storing credentials securely in secrets 
+# Storing DB credentials securely in secrets 
 GOOGLE_SECRET_DB_ID = "gcp_strava_db_password"
 DB_PASSWORD = get_secret_version(GCP_PROJECT_ID, GOOGLE_SECRET_DB_ID)  
+
+#storing OPENAI key in google secret
+OPENAI_API_KEY_ID = "OPENAI_API_KEY"
+OPENAI_SECRET_KEY = get_secret_version(GCP_PROJECT_ID, OPENAI_API_KEY_ID)
 
 # The function to create connection with the PostgreSQL database.
 def create_conn():
@@ -66,25 +70,17 @@ def create_conn():
 # Home endpoint to serve the login link for Strava
 @app.route('/', methods=['GET', 'POST'])
 def home():
-
-    message = ("Welcome! By clicking the button below, you'll be redirected to Strava's site to log in. "
-          "Once you're authenticated by Strava, you'll be brought back here. "
-          "We'll fetch your most recent activity data from Strava, pass the distance to chatGPT, and provide some fun interesting facts. "
-          "Not saving any of the data from the query, it's all stateless in this demo.")
+    message = ("Once you're authenticated by Strava, we'll fetch your most recent activity data from Strava, "
+               "pass the distance to chatGPT, and provide some fun and interesting distance-related facts. "
+               "We don't save any of the data from the query; it's all stateless in this demo. "
+               "This also means you'll most likely get a brand new fact each time.")
 
     if request.method == 'POST':
         model_choice = request.form.get('model_choice')
         return redirect(f'/login?model_choice={model_choice}')
     
-    # Fix the line below by using regular string, not f-string
-    return '''
-        {message}
-        <form method="POST">
-            <input type="radio" name="model_choice" value="gpt-3.5-turbo">gpt-3.5-turbo (slower, but better results)<br>
-            <input type="radio" name="model_choice" value="text-davinci-003" checked>text-davinci-003 (faster but not as good results)<br><br>
-            <input type="submit" value="Submit" formaction="/"><img src="https://storage.googleapis.com/gcp-strava.appspot.com/btn_strava_connectwith_orange%402x.png" alt="Connect with Strava"></input>
-        </form>
-    '''.format(message=message) # We used the format method to replace {message}
+    # We use Jinja2's templating engine which comes with Flask. 
+    return render_template('home.html', message=message)
         
 # Login endpoint to redirect users to the Stava login page
 @app.route('/login', methods=['GET'])
@@ -109,8 +105,14 @@ def exchange_token():
     start_time = time.time()
     model_choice=request.args.get('model_choice')
     messages = []
-    error_message = None # Initialize an error message variable
+    error_message = None # Initialize an error message variable    
 
+    # Check if the 'error' is in the request arguments
+    if 'error' in request.args:
+        error = request.args.get('error')
+        
+        if error == 'access_denied':
+            return 'For the app to work, you have to allow us to see the data. <a href="/">Try again?</a>'
 
     #########################
     #   Extracting 'code' from request arguments
@@ -144,7 +146,7 @@ def exchange_token():
 
         # Parsing JSON response data 
         data = response.json()
-        messages.append('----------AUTH TO STRAVA CHECK----------') 
+        messages.append('---AUTH TO STRAVA CHECK---') 
         messages.append('1. Connect to Stava authorize (strava.com/oauth/authorize): Success!')
 
         # Store access and refresh tokens and other user details in variables
@@ -265,7 +267,7 @@ def exchange_token():
             messages.append(f'8. Save to Database: Success! pk_id = {pk_id}, and total_refresh_checks={total_refresh_checks}')  
             
             # Now let's get some activities for the athlete
-            messages.append(f'9. Let us go find some activities...')
+            messages.append('9. Let us go find some activities...')
             url = "https://www.strava.com/api/v3/athlete/activities"
 
             # Set up the auth headers with the access token
@@ -296,7 +298,8 @@ def exchange_token():
                 return '<br>'.join(messages)
 
             # Once we have the response, we can go through each activity and print the details
-            messages.append('----------STRAVA ACTIVITIES----------')
+            messages.append('')
+            messages.append('---STRAVA ACTIVITIES---')
             for num, activity in enumerate(activities, 1):
                 date = parse(activity['start_date_local'])  # parses to datetime
                 formatted_date = date.strftime('%Y-%m-%d %H:%M:%S')  # to your preferred string format
@@ -305,17 +308,22 @@ def exchange_token():
                 average_speed = activity.get('average_speed', 'N/A')
                 type_ = activity.get('type', 'N/A')
                 messages.append(f"Activity {num}: {formatted_date} : {activity['name']} | Distance: {distance} meters | Moving Time: {moving_time // 60} minutes and {moving_time % 60} seconds | Average Speed: {average_speed} m/s | Type: {type_}")
-                messages.append(f'<span style="color:green">----------chatGPT INTEGRATION----------</span>')
+                messages.append('')
+                messages.append(f'---chatGPT RESPONSE---')
                 
                 # Timestamp before ChatGPT interaction starts
                 chatgpt_start = time.time()  
-                #gpt3_fact = get_fact_for_distance(distance, model_choice)
-                model, fact = get_fact_for_distance(distance)
+                #go get the fact from chatGPT based on their selection.
+                gpt_fact = get_fact_for_distance(distance, model_choice,OPENAI_SECRET_KEY)
+        
                 # Timestamp after ChatGPT operation completes.
                 chatgpt_end = time.time()   
-                messages.append(f"{model.capitalize()} fact: {fact}")
+                messages.append(f"{model_choice.capitalize()} fact: {gpt_fact}")
                 # Store ChatGPT interaction time in a variable.
                 chatgpt_time = chatgpt_end - chatgpt_start
+
+                            # Prepare the HTML and Bootstrap template
+            return render_template('response.html', messages=messages)
 
     except requests.exceptions.Timeout:
         # If the request to Strava API times out
@@ -333,22 +341,28 @@ def exchange_token():
     except Exception as e:
         error_message = str(e) # If an error occurs, store the error message
 
+
     finally:
         # Add logging only if there was no error previously
         if not error_message:
             # Calculate time taken for the whole process
             roundtrip_time = time.time() - start_time
-            messages.append('----------LOGGING VALUES----------')
-            messages.append(f'From login to now: {round(time.time() - start_time, 3)} seconds.')
-            # Add here Strava interaction time
-            messages.append(f'Strava interaction: {round(strava_time, 3)} seconds.')
-            # Add here GCP operation time
-            messages.append(f'GCP database interaction: {round(db_time, 3)} seconds.')
-            messages.append(f'ChatGPT interaction: {round(chatgpt_time, 3)} seconds.')
-            messages.append('<br><a href="https://gcp-strava.wl.r.appspot.com/">Try again?</a>')
-            return '<br>'.join(messages)
+            messages += [
+                '',
+                '---INTERACTION TIME VALUES---',
+                f'Strava: {round(strava_time, 3)} seconds.',
+                f'Google Cloud SQL: {round(db_time, 3)} seconds.',
+                f'OpenAI/ChatGPT: {round(chatgpt_time, 3)} seconds.',
+                f'Total time: {round(time.time() - start_time, 3)} seconds.',
+                f'<em>Codebase + more details</em>: <a href="https://github.com/tillo13/gcp-strava" target="_blank">https://github.com/tillo13/gcp-strava</a>',
+            ]
+            
+            # Prepare the HTML and Bootstrap template
+            return render_template('response.html', messages=messages)
+            
         else:
             return error_message
+
 
 if __name__ == "__main__":
     # Allows us to run a development server and debug our application

@@ -1,0 +1,17 @@
+{% extends "default.html" %}
+
+{% block content %}
+<h1>Strava + chatGPT says...</h1>
+<hr />
+<dl class="row">
+    {% for message in messages %}
+        {% if ':' in message %}
+            <dt class="col-md-3">{{ message.split(":")[0]|safe }}</dt>
+            <dd class="col-md-9">{{ message.split(":")[1:]|join(':')|safe }}</dd>
+        {% else %}
+            <dt class="col-md-12"><strong>{{ message|safe }}</strong></dt>
+        {% endif %}
+    {% endfor %}
+</dl>
+<a href="https://gcp-strava.wl.r.appspot.com/" class="btn btn-primary">Try again?</a>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "default.html" %}
+
+{% block content %}
+<h1>Strava + ChatGPT fun with Google App Engine...</h1>
+<p class="lead">{{ message }}</p>
+<hr/>
+<h4>ChatGPT model options</h4>
+    <form method="POST" class="mb-3">            
+        <div class="form-check">
+            <input type="radio" class="form-check-input" id="model1" name="model_choice" value="text-davinci-003" checked>
+            <label class="form-check-label" for="model1">text-davinci-003 (faster but not as good results)</label>
+        </div>
+        <div class="form-check">
+            <input type="radio" class="form-check-input" id="model2" name="model_choice" value="gpt-3.5-turbo">
+            <label class="form-check-label" for="model2">gpt-3.5-turbo (a bit slower, but more interesting distance results)</label>
+        </div>
+        <button type="submit" formaction="/" class="btn mt-3" style="background: none; padding: 0; border: none;">
+            <img src="https://storage.googleapis.com/gcp-strava.appspot.com/btn_strava_connectwith_orange%402x.png" alt="Connect with Strava" class="img-fluid">
+        </button>
+    </form>
+{% endblock %}

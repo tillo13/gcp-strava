@@ -9,6 +9,8 @@ import time                                                             # to cal
 import json                                                            # For handling JSON data
 from dateutil.parser import parse                                      # For parsing dates and times from stings 
 from psycopg2 import OperationalError
+from threading import Thread
+from queue import Queue
 
 #import code from existing .py code in the app:
 from chatgpt_utils import get_fact_for_distance, get_chatgpt_fact
@@ -21,6 +23,9 @@ import db_utils
 # Configures logging to information level which will display detailed logs
 logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+
+# Create a queue to hold results
+result_queue = Queue()
 
 # An instance of Flask is our WSGI (Web Server Gateway Interface) application.
 app = Flask(__name__)
@@ -121,7 +126,7 @@ def exchange_token():
         strava_time = strava_auth_end - strava_auth_start
         
         # Add token exchange message to the list of messages
-        messages.append('2. Token Exchange (strava.com/oauth/token): Success!')
+        messages.append(f'2. Token Exchange (strava.com/oauth/token): Success! (scope: {scope})')
         messages.append(f'3. Athlete_ID ({athlete_id}): Success!')
         messages.append(f'4. Token expires: {expires_at}')
         messages.append(f'5. Access Token: {access_token}')
@@ -133,7 +138,7 @@ def exchange_token():
         strava_time = strava_auth_end - strava_auth_start
 
         # Attempt to save tokens and user details in database
-        messages.append('7. Save to Database: Attempting...')
+        messages.append('7. Query Database: Attempting...')
 
         # Timestamp before database process starts
         db_start = time.time() 
@@ -153,9 +158,7 @@ def exchange_token():
             # Store DB operation time in a variable.
             db_time = db_end - db_start
             messages.append(f'8. Save to Database: Success! pk_id = {pk_id}, and total_refresh_checks={total_refresh_checks}')  
-            
-            # Now let's get some activities for the athlete
-            messages.append('9. Let us go find some activities...')
+
             # fetch the activities
             try:
                 activities = strava_utils.get_activities(access_token)

@@ -4,8 +4,18 @@
     <title>Strava + chatGPT</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .navbar {   /* Add your custom style class */
+            padding-top: 5px;   /* Adjust these values as required */
+            padding-bottom: 2px;
+        }
+    </style>
 </head>
 <body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+      <a class="navbar-brand" href="/">Home</a>
+    </nav>
     <div class="container mt-5">
         {% block content %}{% endblock %}
     </div>

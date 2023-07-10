@@ -1,6 +1,6 @@
 # Begin by importing necessary third-party libraries
 from flask import Flask, request, redirect, Markup, render_template                            # Flask for building web application
-from google.cloud import secretmanager                                 # For managing secrets in Google Cloud platform
+                              # For managing secrets in Google Cloud platform
 import requests                                                        # For making HTTP requests to Stava API
 import psycopg2                                                        # PostgresSQL library for handling database operations
 import sqlalchemy
@@ -11,7 +11,9 @@ import json                                                            # For han
 from dateutil.parser import parse                                      # For parsing dates and times from stings 
 
 from psycopg2 import OperationalError
-from chatgpt_utils import get_fact_for_distance 
+from chatgpt_utils import get_fact_for_distance, get_chatgpt_fact
+from secrets_manager import get_secret_version
+
 
 # Configures logging to information level which will display detailed logs
 logging.basicConfig()
@@ -19,14 +21,6 @@ logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 # An instance of Flask is our WSGI (Web Server Gateway Interface) application.
 app = Flask(__name__)
-
-# The function to extract secret information from Google Cloud Secret Manager 
-# Secret Manager is a way to store application secrets in Google Cloud
-def get_secret_version(project_id, secret_id, version_id="latest"):
-    client = secretmanager.SecretManagerServiceClient()
-    name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
-    response = client.access_secret_version(name=name)
-    return response.payload.data.decode('UTF-8')
 
 # Configurations for Stava API and Google Cloud
 GCP_PROJECT_ID = "97418787038"                                        # Google Cloud Project ID
@@ -311,18 +305,11 @@ def exchange_token():
                 messages.append('')
                 messages.append(f'---chatGPT RESPONSE---')
                 
-                # Timestamp before ChatGPT interaction starts
-                chatgpt_start = time.time()  
-                #go get the fact from chatGPT based on their selection.
-                gpt_fact = get_fact_for_distance(distance, model_choice,OPENAI_SECRET_KEY)
-        
-                # Timestamp after ChatGPT operation completes.
-                chatgpt_end = time.time()   
+                # go get chatGPT data
+                gpt_fact, chatgpt_time = get_chatgpt_fact(distance, model_choice, OPENAI_SECRET_KEY)  
                 messages.append(f"{model_choice.capitalize()} fact: {gpt_fact}")
-                # Store ChatGPT interaction time in a variable.
-                chatgpt_time = chatgpt_end - chatgpt_start
 
-                            # Prepare the HTML and Bootstrap template
+            # Prepare the HTML and Bootstrap template
             return render_template('response.html', messages=messages)
 
     except requests.exceptions.Timeout:

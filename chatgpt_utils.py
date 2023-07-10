@@ -1,5 +1,12 @@
 import os
+import time
 import openai
+
+def get_chatgpt_fact(distance, model_choice, openai_secret_key):
+    start_time = time.time()
+    fact = get_fact_for_distance(distance, model_choice, openai_secret_key)
+    duration = time.time() - start_time
+    return fact, duration
 
 def get_fact_for_distance(distance, incoming_model, openai_secret_key):
     openai.api_key = openai_secret_key

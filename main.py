@@ -1,4 +1,4 @@
-# 2023july10-802
+# 2023july10-1048
 from flask import Flask, request, redirect, Markup, render_template, redirect, url_for, session  # Flask for building web application
 import requests                                                        # For making HTTP requests to Stava API
 import psycopg2                                                        # PostgresSQL library for handling database operations
@@ -103,15 +103,15 @@ def exchange_token():
         scope = request.args.get('scope')
 
         # Add explicit checks for each expected permission
-        required_permissions = ['read', 'profile:read_all', 'activity:read_all', 'activity:write']
+        required_permissions = ['read', 'activity:read_all']
         granted_permissions = scope.split(',')
 
         # Check for missing permissions and return an appropriate error message if any are missing
         missing_permissions = [permission for permission in required_permissions if permission not in granted_permissions]
 
         if missing_permissions:
-            error_message = "The following permissions were not granted so we can't query your profile: " + ', '.join(missing_permissions)
-            error_message = Markup(f"{error_message}. <br><a href='/'>Please start again</a> and provide the necessary permissions.")
+            error_message = "So to run as of 2023July10, we need at least these permissions: " + ', '.join(missing_permissions)
+            error_message = Markup(f"{error_message}. <br>Feel free to uncheck the others for now.<br><br><a href='/'>Please start again</a> and provide the necessary permissions.")
             return render_template('error.html', message=error_message)
         
         access_token = data['access_token']
@@ -126,9 +126,9 @@ def exchange_token():
         strava_time = strava_auth_end - strava_auth_start
         
         # Add token exchange message to the list of messages
-        messages.append(f'2. Token Exchange (strava.com/oauth/token): Success! (scope: {scope})')
+        messages.append(f'2. Strava Auth: Success! (scope: {scope})')
         messages.append(f'3. Athlete_ID ({athlete_id}): Success!')
-        messages.append(f'4. Token expires: {expires_at}')
+        messages.append(f'4. Token Expires: {expires_at}')
         messages.append(f'5. Access Token: {access_token}')
         messages.append(f'6. Refresh Token: {refresh_token}')
 

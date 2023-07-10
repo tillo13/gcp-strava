@@ -15,7 +15,8 @@ from chatgpt_utils import get_fact_for_distance, get_chatgpt_fact
 from secrets_manager import get_secret_version
 import strava_utils
 from config import GCP_PROJECT_ID, STRAVA_CLIENT_ID, REDIRECT_URL, STRAVA_CLIENT_SECRET, DB_USER,DB_PASSWORD, DB_NAME, CLOUD_SQL_CONNECTION_NAME, OPENAI_SECRET_KEY
-from db_utils import create_conn
+from db_utils import create_conn, save_token_info
+import db_utils
 
 # Configures logging to information level which will display detailed logs
 logging.basicConfig()
@@ -122,88 +123,12 @@ def exchange_token():
         engine = create_conn()
         if isinstance(engine, str):     # If could not create engine (error message is returned), return the engine error message
             return engine
-        
+
         # Connect to DB and execute SQL statements
         with engine.begin() as connection:
-            
-            # First, check if this athlete already has tokens in DB
-            result = connection.execute(
-                text("SELECT * FROM strava_access_tokens WHERE athlete_id = :athlete_id"),
-                {"athlete_id": athlete_id}
-            )
-            
-            # Fetch the result (if any)
-            row = result.fetchone()
-            existing_token_info = row._asdict() if row else None
 
-            # Now, depending on whether we already have tokens for this athlete in DB, either update or insert new record
-            if existing_token_info:
-                current_time = int(time.time())
-                update_result = connection.execute(text("UPDATE strava_access_tokens SET total_refresh_checks = total_refresh_checks + 1 WHERE athlete_id = :athlete_id RETURNING total_refresh_checks"), {"athlete_id": athlete_id})
-                total_refresh_checks = update_result.fetchone()[0]
-
-                # If the access token is expired, refresh it and increment total_refreshes
-                if current_time > existing_token_info['expires_at']:
-                    result = connection.execute(
-                        text("""
-                            UPDATE strava_access_tokens 
-                            SET client_id=:client_id, 
-                                access_token=:access_token, 
-                                refresh_token=:refresh_token, 
-                                expires_at=:expires_at, 
-                                expires_in=:expires_in,
-                                total_refreshes = total_refreshes + 1
-                            WHERE athlete_id=:athlete_id
-                            RETURNING pk_id
-                        """),
-                        {
-                            "client_id": STRAVA_CLIENT_ID,
-                            "athlete_id": athlete_id,
-                            "access_token": access_token,
-                            "refresh_token": refresh_token,
-                            "expires_at": expires_at,
-                            "expires_in": expires_in
-                        }
-                    )
-                else:
-                    # If the access token is not expired, only update the expires_in time
-                    result = connection.execute(
-                        text("""
-                            UPDATE strava_access_tokens 
-                            SET expires_in=:expires_in, 
-                                last_updated=now() 
-                            WHERE athlete_id=:athlete_id
-                            RETURNING pk_id
-                        """),
-                        {
-                            "athlete_id": athlete_id,
-                            "expires_in": expires_in
-                        }
-                    )
-            else:
-                result = connection.execute(
-                    text("""
-                        INSERT INTO strava_access_tokens (client_id, athlete_id, access_token, refresh_token, expires_at, expires_in)
-                        VALUES (:client_id, :athlete_id, :access_token, :refresh_token, :expires_at, :expires_in)
-                        RETURNING pk_id
-                    """),
-                    {
-                        "client_id": STRAVA_CLIENT_ID,
-                        "athlete_id": athlete_id,
-                        "access_token": access_token,
-                        "refresh_token": refresh_token,
-                        "expires_at": expires_at,
-                        "expires_in": expires_in
-                    }
-                )
-
-                update_result = connection.execute(text("SELECT total_refresh_checks FROM strava_access_tokens WHERE athlete_id = :athlete_id"), {"athlete_id": athlete_id})
-                total_refresh_checks = update_result.fetchone()[0]
-
-            # Fetch the primary key id of the row just inserted/updated
-            pk_id = result.fetchone()[0]
-
-            # Add success message to the list of messages
+            # Call the new db_utils function to perform the insert/update operations
+            pk_id, total_refresh_checks = db_utils.save_token_info(connection, STRAVA_CLIENT_ID, athlete_id, access_token, refresh_token, expires_at, expires_in)
             # Timestamp right after database process
             db_end = time.time()
             # Store DB operation time in a variable.

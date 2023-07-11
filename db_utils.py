@@ -55,7 +55,8 @@ def save_token_info(connection, STRAVA_CLIENT_ID, athlete_id, access_token, refr
                         refresh_token=:refresh_token, 
                         expires_at=:expires_at, 
                         expires_in=:expires_in,
-                        total_refreshes = total_refreshes + 1
+                        total_refreshes = total_refreshes + 1,
+                     last_refreshed_by = 'gcp-strava.wl.r.appspot.com' 
                     WHERE athlete_id=:athlete_id
                     RETURNING pk_id
                 """),
@@ -69,12 +70,13 @@ def save_token_info(connection, STRAVA_CLIENT_ID, athlete_id, access_token, refr
                 }
             )
         else:
-            # If the access token is not expired, only update the expires_in time
+            # If the access token is not expired, only update the expires_in time, and last_refreshed_by
             result = connection.execute(
                 text("""
                     UPDATE strava_access_tokens 
                     SET expires_in=:expires_in, 
-                        last_updated=now() 
+                        last_updated=now(),
+                        last_refreshed_by = 'gcp-strava.wl.r.appspot.com'
                     WHERE athlete_id=:athlete_id
                     RETURNING pk_id
                 """),
@@ -86,8 +88,8 @@ def save_token_info(connection, STRAVA_CLIENT_ID, athlete_id, access_token, refr
     else:
         result = connection.execute(
             text("""
-                INSERT INTO strava_access_tokens (client_id, athlete_id, access_token, refresh_token, expires_at, expires_in)
-                VALUES (:client_id, :athlete_id, :access_token, :refresh_token, :expires_at, :expires_in)
+                INSERT INTO strava_access_tokens (client_id, athlete_id, access_token, refresh_token, expires_at, expires_in, last_refreshed_by)
+                VALUES (:client_id, :athlete_id, :access_token, :refresh_token, :expires_at, :expires_in,'gcp-strava.wl.r.appspot.com')
                 RETURNING pk_id
             """),
             {

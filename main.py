@@ -11,10 +11,17 @@ from dateutil.parser import parse                                      # For par
 from psycopg2 import OperationalError
 from threading import Thread
 from queue import Queue
+from google.cloud import secretmanager
+
+def get_secret_version(project_id, secret_id, version_id="latest"):
+    client = secretmanager.SecretManagerServiceClient()
+    name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
+    response = client.access_secret_version(name=name)
+    return response.payload.data.decode('UTF-8')
 
 #import code from existing .py code in the app:
 from chatgpt_utils import get_fact_for_distance, get_chatgpt_fact
-from secrets_manager import get_secret_version
+#from secrets_manager import get_secret_version
 import strava_utils
 from config import SITE_HOMEPAGE,GCP_PROJECT_ID, STRAVA_CLIENT_ID, REDIRECT_URL, STRAVA_CLIENT_SECRET, DB_USER,DB_PASSWORD, DB_NAME, CLOUD_SQL_CONNECTION_NAME, OPENAI_SECRET_KEY
 from db_utils import create_conn, save_token_info

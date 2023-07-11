@@ -37,16 +37,21 @@
     </div>
     <footer class="footer">
        <div class="container" style="font-size: 12px; text-align: right;">
-            <p id="datetime">&copy; <a href="https://github.com/tillo13">github.com/tillo13</a> - Strava+chatGPT - No rights reserved.</p>
-        <!-- Add a navigation bar or other details here -->
+            <p id="datetime-base" style="display: none;">&copy; <a href="https://github.com/tillo13" target="_blank">github.com/tillo13</a> - Strava+chatGPT | </p>
+            <p id="datetime"></p>
        </div>
     </footer>
-    
-    <!-- JavaScript to get client date and time -->
-    <script>
+
+<!-- JavaScript to get client date and time -->
+<script>
+    function displayTime() {
+        var baseText = document.getElementById('datetime-base').innerHTML;
         var now = new Date();
         var options = {'year': 'numeric', 'month': 'long', 'day': 'numeric', 'hour': 'numeric', 'minute': 'numeric', 'second': 'numeric'};
-        document.getElementById('datetime').innerText += "  " + now.toLocaleDateString("en-US", options);
-    </script>
+        document.getElementById('datetime').innerHTML = baseText + now.toLocaleDateString("en-US", options);
+    }
+    displayTime(); // update time initially when page loads
+    setInterval(displayTime, 1000); // update time every 1 second
+</script>
 </body>
 </html>

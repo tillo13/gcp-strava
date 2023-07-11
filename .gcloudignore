@@ -19,7 +19,8 @@ __pycache__/
 /setup.cfg
 .env
 notes.txt
-
+/activities/
+activities/
 
 # Python pycache:
 __pycache__/

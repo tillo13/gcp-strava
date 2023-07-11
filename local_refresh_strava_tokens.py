@@ -18,38 +18,37 @@ def create_conn():
     return conn
 
 def refresh_strava_tokens():
-    """Refreshes Strava tokens using refresh token present in the database."""
+    """Refreshes Strava tokens using the refresh token present in the database."""
 
-    # Creating connection to your database
+    # Creating a connection to your database
     conn = create_conn()
 
     # If connection successful, fetch the refresh token stored in the database
     with conn.cursor() as cursor:
-
         # Query to select all athletes' refresh tokens from your specific table
-        cursor.execute("SELECT athlete_id, refresh_token FROM strava_access_tokens")
+        cursor.execute("SELECT athlete_id, refresh_token, access_token FROM strava_access_tokens")
 
         # Fetch all athletes
-        athletes = cursor.fetchall() # <--- Corrected indentation here
+        athletes = cursor.fetchall()
 
     if not athletes:
         print('No athletes found in the database.')
         return
 
     # For each athlete, refresh their Strava token
-    for athlete_id, refresh_token in athletes:
+    for athlete_id, refresh_token, access_token in athletes:
 
-        # Use the refresh_token from the database to get new access_token
+        # Use the refresh_token from the database to get a new access_token
         payload = {
             'client_id': STRAVA_CLIENT_ID,
             'client_secret': STRAVA_CLIENT_SECRET,
             'refresh_token': refresh_token,
             'grant_type': 'refresh_token'
         }
-        
+
         response = requests.post(STRAVA_TOKEN_URL, params=payload)
-        
-        # If the request was successful, the new access token, refresh token and expiration date will be in the response
+
+        # If the request was successful, the new access token, refresh token, and expiration date will be in the response
         if response.status_code == 200:
             new_access_token = response.json()['access_token']
             new_refresh_token = response.json()['refresh_token']
@@ -58,12 +57,25 @@ def refresh_strava_tokens():
 
             # Save these new tokens to your database
             with conn.cursor() as cursor:
-                cursor.execute("""
+                # Check if the old access token and the new access token are the same
+                if access_token == new_access_token:
+                    cursor.execute("""
                         UPDATE strava_access_tokens
-                        SET access_token = %s, 
-                            refresh_token = %s, 
-                            expires_at = %s, 
-                            expires_in = %s, 
+                        SET last_updated = now(),
+                            expires_in = %s,
+                            total_refresh_checks = total_refresh_checks + 1,
+                            last_refreshed_by = 'local_script'
+                        WHERE athlete_id = %s
+                    """,
+                    (new_expires_in, athlete_id))
+                    print(f'No token update (but updated relevant fields) for athlete {athlete_id}.')
+                else:
+                    cursor.execute("""
+                        UPDATE strava_access_tokens
+                        SET access_token = %s,
+                            refresh_token = %s,
+                            expires_at = %s,
+                            expires_in = %s,
                             last_updated = now(),
                             total_refreshes = total_refreshes + 1,
                             total_refresh_checks = total_refresh_checks + 1,
@@ -71,13 +83,14 @@ def refresh_strava_tokens():
                         WHERE athlete_id = %s
                     """,
                     (new_access_token, new_refresh_token, new_expires_at, new_expires_in, athlete_id))
+                    print(f'Successfully updated tokens for athlete {athlete_id}.')
                 # Commit the transaction
                 conn.commit()
 
-            print(f'Successfully updated refresh token for athlete {athlete_id}.')
-            
         else:
             print(f'Failed to refresh token for athlete {athlete_id}:', response.json())
+
+
 
 if __name__ == "__main__":
     refresh_strava_tokens()

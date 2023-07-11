@@ -45,6 +45,8 @@ You can test the live functioning of this application at: [https://gcp-strava.wl
 In summation, this project is a demonstration of efficient utilization of various Google Cloud services such as App Engine, Secret Manager, Cloud SQL, Google Cloud Functions, and Cloud Scheduler in conjunction with a third-party API (Strava in this case). It illustrates best practices for developing secure, scalable, and interactive web applications.
 
 ## Next steps
-- Thinking about tying in a real-estate API to track houses for sale in the area of a polyline chart.
-- more sabermetric data
-
+- Thinking about tying in a real-estate API to track houses for sale in the area of a polyline chart from strava.
+- more sabermetric data...
+- if ride/distance is zero, iterate until a ride isn't zero.
+- save rides/chatGPT results?
+- 

@@ -50,3 +50,5 @@ In summation, this project is a demonstration of efficient utilization of variou
 - if ride/distance is zero, iterate until a ride isn't zero.
 - save rides/chatGPT results?
 - align/link Peloton via their API for further metrics?
+- cleaner results page page
+- bootstrap buildout.

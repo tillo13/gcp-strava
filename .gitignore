@@ -8,3 +8,7 @@ notes.txt
 #anything working or test
 working*
 test*
+
+**/.DS_Store
+**/test*
+

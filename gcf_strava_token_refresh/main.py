@@ -32,13 +32,15 @@ def update_tokens(request):
     with conn.connect() as connection:
         result = connection.execute(sqlalchemy.text(
             "SELECT athlete_id, refresh_token FROM strava_access_tokens"))
-
     if result.rowcount == 0:
         print('No athletes found in the database.')
-        return
+        return 'No athletes found in the database.'
+    else:
+        print(f'{result.rowcount} athletes found in the database.')
 
     for row in result:
         athlete_id, refresh_token = row.athlete_id, row.refresh_token
+        print(f'Updating tokens for athlete {athlete_id}...')
         payload = {
             'client_id': STRAVA_CLIENT_ID,
             'client_secret': STRAVA_CLIENT_SECRET,
@@ -67,4 +69,7 @@ def update_tokens(request):
                         "expires_at": new_expires_at, 
                         "athlete_id": athlete_id
                     })
-    return 'Tokens updated!', 200
+            print(f'Successfully updated tokens for athlete {athlete_id}.')
+        else:
+            print(f'Failed to update tokens for athlete {athlete_id}. Response from Strava: {response.json()}')
+    return 'Tokens update process completed!', 200

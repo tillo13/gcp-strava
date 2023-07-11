@@ -54,6 +54,7 @@ def refresh_strava_tokens():
             new_access_token = response.json()['access_token']
             new_refresh_token = response.json()['refresh_token']
             new_expires_at = response.json()['expires_at']
+            new_expires_in = response.json()['expires_in']
 
             # Save these new tokens to your database
             with conn.cursor() as cursor:
@@ -62,13 +63,14 @@ def refresh_strava_tokens():
                         SET access_token = %s, 
                             refresh_token = %s, 
                             expires_at = %s, 
+                            expires_in = %s, 
                             last_updated = now(),
                             total_refreshes = total_refreshes + 1,
                             total_refresh_checks = total_refresh_checks + 1,
                             last_refreshed_by = 'local_script'
                         WHERE athlete_id = %s
                     """,
-                    (new_access_token, new_refresh_token, new_expires_at, athlete_id))
+                    (new_access_token, new_refresh_token, new_expires_at, new_expires_in, athlete_id))
                 # Commit the transaction
                 conn.commit()
 

@@ -6,6 +6,8 @@ import requests
 import time
 from psycopg2 import OperationalError
 from config import STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, STRAVA_TOKEN_URL, DB_USER, DB_PASSWORD, DB_NAME, CLOUD_SQL_CONNECTION_NAME
+import logging
+from datetime import datetime
 
 def create_conn():
     db_user = DB_USER
@@ -28,48 +30,69 @@ app = Flask(__name__)
 
 @app.route('/update-strava-tokens', methods=['POST'])
 def update_tokens(request):
-    conn = create_conn()
-    with conn.connect() as connection:
-        result = connection.execute(sqlalchemy.text(
-            "SELECT athlete_id, refresh_token FROM strava_access_tokens"))
-    if result.rowcount == 0:
-        print('No athletes found in the database.')
-        return 'No athletes found in the database.'
-    else:
-        print(f'{result.rowcount} athletes found in the database.')
+    # Get root logger
+    logger = logging.getLogger()
+    try:
+        conn = create_conn()
+        with conn.connect() as connection:
+            result = connection.execute(sqlalchemy.text(
+                "SELECT athlete_id, refresh_token FROM strava_access_tokens"))
+        # Log row count
+        row_count = result.rowcount if result else 0
+        logger.info(f'{row_count} athletes found in the database.')
+        logger.info(f'Executed SQL: {result}')
+        if row_count == 0:
+            return 'No athletes found in the database.', 204
 
-    for row in result:
-        athlete_id, refresh_token = row.athlete_id, row.refresh_token
-        print(f'Updating tokens for athlete {athlete_id}...')
-        payload = {
-            'client_id': STRAVA_CLIENT_ID,
-            'client_secret': STRAVA_CLIENT_SECRET,
-            'refresh_token': refresh_token,
-            'grant_type': 'refresh_token'
-        }
-        response = requests.post(STRAVA_TOKEN_URL, params=payload)
-        if response.status_code == 200:
-            new_access_token = response.json()['access_token']
-            new_refresh_token = response.json()['refresh_token']
-            new_expires_at = response.json()['expires_at']
-            with conn.connect() as connection:
-                connection.execute(sqlalchemy.text("""
-                        UPDATE strava_access_tokens
-                        SET access_token = :access_token, 
-                            refresh_token = :refresh_token, 
-                            expires_at = :expires_at, 
-                            last_updated = now(),
-                            total_refreshes = total_refreshes + 1,
-                            total_refresh_checks = total_refresh_checks + 1
-                        WHERE athlete_id = :athlete_id
-                    """),
-                    {
-                        "access_token": new_access_token, 
-                        "refresh_token": new_refresh_token, 
-                        "expires_at": new_expires_at, 
-                        "athlete_id": athlete_id
-                    })
-            print(f'Successfully updated tokens for athlete {athlete_id}.')
-        else:
-            print(f'Failed to update tokens for athlete {athlete_id}. Response from Strava: {response.json()}')
-    return 'Tokens update process completed!', 200
+        expire_data = {}  # create a dictionary to store athlete_id and expires_in values
+        for row in result:
+            athlete_id, refresh_token = row.athlete_id, row.refresh_token
+            logger.info(f'Updating tokens for athlete {athlete_id}...')
+            payload = {
+                'client_id': STRAVA_CLIENT_ID,
+                'client_secret': STRAVA_CLIENT_SECRET,
+                'refresh_token': refresh_token,
+                'grant_type': 'refresh_token'
+            }
+            response = requests.post(STRAVA_TOKEN_URL, params=payload)
+            if response.status_code == 200:
+                new_access_token = response.json().get('access_token')
+                new_refresh_token = response.json().get('refresh_token')
+                new_expires_at = response.json().get('expires_at')
+                new_expires_in = response.json().get('expires_in') 
+
+                with conn.connect() as connection:                            
+                    updated_rows = connection.execute(sqlalchemy.text("""
+                            UPDATE strava_access_tokens
+                            SET access_token = :access_token, 
+                                refresh_token = :refresh_token, 
+                                expires_at = :expires_at,                                         
+                                expires_in = :expires_in,                       
+                                last_updated = now(),
+                                total_refreshes = total_refreshes + 1,
+                                total_refresh_checks = total_refresh_checks + 1,
+                                last_refreshed_by = 'google_cloud_function'
+                            WHERE athlete_id = :athlete_id
+                        """),
+                        {
+                            "access_token": new_access_token, 
+                            "refresh_token": new_refresh_token, 
+                            "expires_at": new_expires_at, 
+                            "expires_in": new_expires_in, 
+                            "athlete_id": athlete_id
+                        }).rowcount 
+                    
+                    logger.info(f'Executed SQL: {updated_rows}')
+                    connection.commit()  # Explicitly commit the transaction
+                    time.sleep(0.1)  # pause for 100ms as I was seeing it not do all entries...
+
+                logger.info(f'Updated {updated_rows} rows for athlete {athlete_id}.')
+                expire_data[athlete_id] = new_expires_in  # add athlete_id and expires_in to the dictionary
+                
+            else:
+                logger.error(f'Failed to fetch tokens for athlete {athlete_id}. Response from Strava: {response.json()}')
+
+        return {'Tokens update process completed! ':  datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'expire_data': expire_data}, 200
+
+    except Exception as e:
+        logger.error(f'Error while updating tokens: {e}')

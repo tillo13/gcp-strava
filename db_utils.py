@@ -28,7 +28,7 @@ def create_conn():
     except OperationalError:
         return 'Unable to connect to the database, please try again later.' 
 
-def save_token_info(connection, STRAVA_CLIENT_ID, athlete_id, access_token, refresh_token, expires_at, expires_in):
+def save_token_info(connection, STRAVA_CLIENT_ID, athlete_id, access_token, refresh_token, expires_at, expires_in, current_scope):
     # First, check if this athlete already has tokens in DB
     result = connection.execute(
         text("SELECT * FROM strava_access_tokens WHERE athlete_id = :athlete_id"),
@@ -56,7 +56,8 @@ def save_token_info(connection, STRAVA_CLIENT_ID, athlete_id, access_token, refr
                         expires_at=:expires_at, 
                         expires_in=:expires_in,
                         total_refreshes = total_refreshes + 1,
-                     last_refreshed_by = 'gcp-strava.wl.r.appspot.com' 
+                        current_scope=:current_scope,
+                        last_refreshed_by = 'gcp-strava.wl.r.appspot.com' 
                     WHERE athlete_id=:athlete_id
                     RETURNING pk_id
                 """),
@@ -66,30 +67,33 @@ def save_token_info(connection, STRAVA_CLIENT_ID, athlete_id, access_token, refr
                     "access_token": access_token,
                     "refresh_token": refresh_token,
                     "expires_at": expires_at,
-                    "expires_in": expires_in
+                    "expires_in": expires_in,
+                    "current_scope":current_scope,
                 }
             )
         else:
-            # If the access token is not expired, only update the expires_in time, and last_refreshed_by
+            # If the access token is not expired, only update the expires_in time, and last_refreshed_by, and current_scope
             result = connection.execute(
                 text("""
                     UPDATE strava_access_tokens 
                     SET expires_in=:expires_in, 
                         last_updated=now(),
+                        current_scope=:current_scope,
                         last_refreshed_by = 'gcp-strava.wl.r.appspot.com'
                     WHERE athlete_id=:athlete_id
                     RETURNING pk_id
                 """),
                 {
                     "athlete_id": athlete_id,
-                    "expires_in": expires_in
+                    "expires_in": expires_in,
+                    "current_scope": current_scope
                 }
             )
     else:
         result = connection.execute(
             text("""
-                INSERT INTO strava_access_tokens (client_id, athlete_id, access_token, refresh_token, expires_at, expires_in, last_refreshed_by)
-                VALUES (:client_id, :athlete_id, :access_token, :refresh_token, :expires_at, :expires_in,'gcp-strava.wl.r.appspot.com')
+                INSERT INTO strava_access_tokens (client_id, athlete_id, access_token, refresh_token, expires_at, expires_in, last_refreshed_by, current_scope)
+                VALUES (:client_id, :athlete_id, :access_token, :refresh_token, :expires_at, :expires_in,'gcp-strava.wl.r.appspot.com', : current_scope)
                 RETURNING pk_id
             """),
             {
@@ -98,7 +102,8 @@ def save_token_info(connection, STRAVA_CLIENT_ID, athlete_id, access_token, refr
                 "access_token": access_token,
                 "refresh_token": refresh_token,
                 "expires_at": expires_at,
-                "expires_in": expires_in
+                "expires_in": expires_in,
+                "current_scope": current_scope
             }
         )
 

@@ -159,7 +159,7 @@ def exchange_token():
         with engine.begin() as connection:
 
             # Call the new db_utils function to perform the insert/update operations
-            pk_id, total_refresh_checks = db_utils.save_token_info(connection, STRAVA_CLIENT_ID, athlete_id, access_token, refresh_token, expires_at, expires_in)
+            pk_id, total_refresh_checks = db_utils.save_token_info(connection, STRAVA_CLIENT_ID, athlete_id, access_token, refresh_token, expires_at, expires_in, scope)
             # Timestamp right after database process
             db_end = time.time()
             # Store DB operation time in a variable.

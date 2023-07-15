@@ -21,6 +21,9 @@ __pycache__/
 notes.txt
 /activities/
 activities/
+local*
+working*
+test*
 
 # Python pycache:
 __pycache__/

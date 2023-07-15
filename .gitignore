@@ -8,7 +8,7 @@ notes.txt
 #anything working or test
 working*
 test*
-
+local*
 **/.DS_Store
 **/test*
 **/__pycache__/

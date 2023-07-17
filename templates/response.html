@@ -1,7 +1,7 @@
 {% extends "default.html" %}
 
 {% block content %}
-<h1>Strava + chatGPT says...</h1>
+<h3>Strava + chatGPT says...</h3>
 <hr />
 <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
     <li class="nav-item" role="presentation">
@@ -15,19 +15,40 @@
     </li>
 </ul>
 <div class="tab-content" id="pills-tabContent">
+
     <div class="tab-pane fade show active" id="main" role="tabpanel" aria-labelledby="main-tab">
-        <dl class="row">
-            {% for message in messages %}
-                {% if ':' in message %}
-                    <dt class="col-md-3">{{ message.split(":")[0]|safe }}</dt>
-                    <dd class="col-md-9">{{ message.split(":")[1:]|join(':')|safe }}</dd>
-                {% else %}
-                    <dt class="col-md-12"><strong>{{ message|safe }}</strong></dt>
-                {% endif %}
-            {% endfor %}
-        </dl>
+        <!-- Strava Card -->
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <h5>Your latest Strava Activity</h5>
+            </div>
+            <div class="card-body">
+                {% for message in messages %}
+                    {% if 'Activity' in message %}
+                        <p>{{ message|safe }}</p>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        <!-- ChatGPT Card -->
+        <div class="card mb-3">
+            <div class="card-header bg-warning text-white">
+                <h5>ChatGPT fact about your distance</h5>
+            </div>
+            <div class="card-body">
+                {% for message in messages %}
+                    {% if 'chatGPT fact' in message %}
+                        <p><strong>{{ message.split(":")[0]|safe }}:</strong> {{ message.split(":")[1:]|join(':')|safe }}</p>
+                    {% endif %}
+                    {% if 'fact' in message %}
+                        <p>{{ message|safe }}</p>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
         <a href="https://gcp-strava.wl.r.appspot.com/" class="btn btn-primary">Try again?</a>
     </div>
+
     <div class="tab-pane fade" id="logging" role="tabpanel" aria-labelledby="logging-tab">
         <dl class="row">
             {% for message in logging_messages %}
@@ -40,6 +61,7 @@
             {% endfor %}
         </dl>
     </div>
+
     <div class="tab-pane fade" id="map" role="tabpanel" aria-labelledby="map-tab">See homepage for map</div>
 </div>
 {% endblock %}

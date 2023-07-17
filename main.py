@@ -195,7 +195,6 @@ def exchange_token():
 
                 
                 # go get chatGPT data
-                messages.append(f'...chatGPT fact about your distance...')
                 gpt_fact, chatgpt_time = get_chatgpt_fact(distance, model_choice, OPENAI_SECRET_KEY)  
                 messages.append(f"{model_choice.capitalize()} fact: {gpt_fact}")
 

@@ -3,15 +3,33 @@
 {% block content %}
 <h1>Strava + chatGPT says...</h1>
 <hr />
-<dl class="row">
-    {% for message in messages %}
-        {% if ':' in message %}
-            <dt class="col-md-3">{{ message.split(":")[0]|safe }}</dt>
-            <dd class="col-md-9">{{ message.split(":")[1:]|join(':')|safe }}</dd>
-        {% else %}
-            <dt class="col-md-12"><strong>{{ message|safe }}</strong></dt>
-        {% endif %}
-    {% endfor %}
-</dl>
-<a href="https://gcp-strava.wl.r.appspot.com/" class="btn btn-primary">Try again?</a>
+<ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link active" id="main-tab" data-toggle="pill" href="#main" role="tab" aria-controls="main" aria-selected="true">Main</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="about-tab" data-toggle="pill" href="#about" role="tab" aria-controls="about" aria-selected="false">About</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="map-tab" data-toggle="pill" href="#map" role="tab" aria-controls="map" aria-selected="false">Map</a>
+    </li>
+</ul>
+<div class="tab-content" id="pills-tabContent">
+    <div class="tab-pane fade show active" id="main" role="tabpanel" aria-labelledby="main-tab">
+        <dl class="row">
+            {% for message in messages %}
+                {% if ':' in message %}
+                    <dt class="col-md-3">{{ message.split(":")[0]|safe }}</dt>
+                    <dd class="col-md-9">{{ message.split(":")[1:]|join(':')|safe }}</dd>
+                {% else %}
+                    <dt class="col-md-12"><strong>{{ message|safe }}</strong></dt>
+                {% endif %}
+            {% endfor %}
+        </dl>
+        <a href="https://gcp-strava.wl.r.appspot.com/" class="btn btn-primary">Try again?</a>
+    </div>
+    <div class="tab-pane fade" id="about" role="tabpanel" aria-labelledby="about-tab"><em>Codebase + more details</em>: <a href="https://github.com/tillo13/gcp-strava" target="_blank">https://github.com/tillo13/gcp-strava</a>',
+    </div>
+    <div class="tab-pane fade" id="map" role="tabpanel" aria-labelledby="map-tab">See homepage for map</div>
+</div>
 {% endblock %}

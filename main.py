@@ -54,7 +54,11 @@ def home():
     
     # We use Jinja2's templating engine which comes with Flask. 
     return render_template('home.html', message=message)
-        
+
+@app.route('/about')
+def about():
+    return render_template('about.html')
+
 # Login endpoint to redirect users to the Stava login page
 @app.route('/login', methods=['GET'])
 def login():
@@ -220,7 +224,6 @@ def exchange_token():
                 f'Google Cloud SQL: {round(db_time, 3)} seconds.',
                 f'OpenAI/ChatGPT: {round(chatgpt_time, 3)} seconds.',
                 f'Total time: {round(time.time() - start_time, 3)} seconds.',
-                f'<em>Codebase + more details</em>: <a href="https://github.com/tillo13/gcp-strava" target="_blank">https://github.com/tillo13/gcp-strava</a>',
             ]
             
             # Prepare the HTML and Bootstrap template

@@ -1,29 +1,20 @@
 {% extends "default.html" %}
 
 {% block content %}
-<div class="card mb-3">
-    <div class="card-header bg-primary text-white">
-        <h1>Strava + ChatGPT fun with Google App Engine...</h1>
-    </div>
-
-    <div class="card-body">
-        <p class="lead">{{ message }}</p>
-        <hr/>
-
-        <h4>ChatGPT model options:</h4>
-        <form method="POST" class="mb-3">            
-            <div class="form-check">
-                <input type="radio" class="form-check-input" id="model1" name="model_choice" value="text-davinci-003" checked>
-                <label class="form-check-label" for="model1">text-davinci-003 (Faster but less fun facts.)</label>
-            </div>
-            <div class="form-check">
-                <input type="radio" class="form-check-input" id="model2" name="model_choice" value="gpt-3.5-turbo">
-                <label class="form-check-label" for="model2">gpt-3.5-turbo (Slower, but more fun facts.)</label>
-            </div>
-            <button type="submit" formaction="/" class="btn mt-3" style="background: none; padding: 0; border: none;">
-                <img src="https://storage.googleapis.com/gcp-strava.appspot.com/btn_strava_connectwith_orange%402x.png" alt="Connect with Strava" class="img-fluid">
-            </button>
-        </form>
-    </div>
-</div>
+<h3>Strava + ChatGPT fun with Google App Engine...</h3>
+<p class="lead">{{ message }}</p>
+<hr/>
+<h4>ChatGPT model options:</h4>
+    <form method="POST" class="mb-3">            
+        <div class="form-check">
+            <input type="radio" class="form-check-input" id="model1" name="model_choice" value="text-davinci-003" checked>
+            <label class="form-check-label" for="model1">text-davinci-003 (Faster but less fun facts.)</label>
+        </div>
+        <div class="form-check">
+            <input type="radio" class="form-check-input" id="model2" name="model_choice" value="gpt-3.5-turbo">
+            <label class="form-check-label" for="model2">gpt-3.5-turbo (Slower, but more fun facts.)</label>
+        </div>
+        <button type="submit" formaction="/" class="btn mt-3" style="background: none; padding: 0; border: none;">
+            <img src="https://storage.googleapis.com/gcp-strava.appspot.com/btn_strava_connectwith_orange%402x.png" alt="Connect with Strava" class="img-fluid">
+        </button>
 {% endblock %}

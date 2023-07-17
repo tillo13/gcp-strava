@@ -20,12 +20,13 @@
         <!-- Strava Card -->
         <div class="card mb-3">
             <div class="card-header bg-primary text-white">
-                <h5>Your latest Strava Activity</h5>
+                <h5>Your latest Strava activity:</h5>
             </div>
             <div class="card-body">
                 {% for message in messages %}
                     {% if 'Activity' in message %}
-                        <p>{{ message|safe }}</p>
+                        {% set message_parts = message.split(':') %}
+                        <p><strong>{{ message_parts[0] }}:</strong>{{ message_parts[1:]|join(':')|safe }}</p>
                     {% endif %}
                 {% endfor %}
             </div>
@@ -33,7 +34,7 @@
         <!-- ChatGPT Card -->
         <div class="card mb-3">
             <div class="card-header bg-warning text-white">
-                <h5>ChatGPT fact about your distance</h5>
+                <h5>ChatGPT analysis:</h5>
             </div>
             <div class="card-body">
                 {% for message in messages %}

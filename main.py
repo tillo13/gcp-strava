@@ -182,8 +182,7 @@ def exchange_token():
                 return '<br>'.join(messages)
 
             # Once we have the response, we can go through each activity and print the details
-            messages.append('')
-            messages.append('---STRAVA ACTIVITIES---')
+            messages.append('Your latest Strava activity...')
             for num, activity in enumerate(activities, 1):
                 date = parse(activity['start_date_local'])  # parses to datetime
                 formatted_date = date.strftime('%Y-%m-%d %H:%M:%S')  # to your preferred string format
@@ -193,9 +192,10 @@ def exchange_token():
                 type_ = activity.get('type', 'N/A')
                 messages.append(f"Activity {num}: {formatted_date} : {activity['name']} | Distance: {distance} meters | Moving Time: {moving_time // 60} minutes and {moving_time % 60} seconds | Average Speed: {average_speed} m/s | Type: {type_}")
                 messages.append('')
-                messages.append(f'---chatGPT RESPONSE---')
+
                 
                 # go get chatGPT data
+                messages.append(f'...chatGPT fact about your distance...')
                 gpt_fact, chatgpt_time = get_chatgpt_fact(distance, model_choice, OPENAI_SECRET_KEY)  
                 messages.append(f"{model_choice.capitalize()} fact: {gpt_fact}")
 
@@ -222,7 +222,7 @@ def exchange_token():
         if not error_message:
             # Calculate time taken for the whole process
             roundtrip_time = time.time() - start_time
-            messages += [
+            logging_messages += [
                 '',
                 '---INTERACTION TIME VALUES---',
                 f'Strava: {round(strava_time, 3)} seconds.',

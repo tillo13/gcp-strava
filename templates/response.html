@@ -32,7 +32,7 @@
         <dl class="row">
             {% for message in logging_messages %}
                 {% if ':' in message %}
-                    <dt class="col-md-3">{{ message.split(":")[0]|safe }}</dt>
+                    <dt class="col-md-3">{{ message.split(":")[0]|safe }}:</dt>
                     <dd class="col-md-9">{{ message.split(":")[1:]|join(':')|safe }}</dd>
                 {% else %}
                     <dt class="col-md-12"><strong>{{ message|safe }}</strong></dt>

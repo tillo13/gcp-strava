@@ -81,7 +81,10 @@ def login():
 def exchange_token():
     start_time = time.time()
     model_choice=request.args.get('model_choice')
+    #this is just the default messages on the response.html page
     messages = []
+    #set values to put in the "logging tab"
+    logging_messages = []
     error_message = None # Initialize an error message variable    
 
     # Check if the 'error' is in the request arguments
@@ -137,11 +140,11 @@ def exchange_token():
         strava_time = strava_auth_end - strava_auth_start
         
         # Add token exchange message to the list of messages
-        messages.append(f'2. Strava Auth: Success! (scope: {scope})')
-        messages.append(f'3. Athlete_ID ({athlete_id}): Success!')
-        messages.append(f'4. Token Expires: {expires_at}')
-        messages.append(f'5. Access Token: {access_token}')
-        messages.append(f'6. Refresh Token: {refresh_token}')
+        logging_messages.append(f'1. Strava Auth: Success! (scope: {scope})')
+        logging_messages.append(f'2. Athlete_ID ({athlete_id}): Success!')
+        logging_messages.append(f'3. Token Expires: {expires_at}')
+        logging_messages.append(f'4. Access Token: {access_token}')
+        logging_messages.append(f'5. Refresh Token: {refresh_token}')
 
         # Timestamp right after Strava authorization
         strava_auth_end = time.time()
@@ -149,7 +152,7 @@ def exchange_token():
         strava_time = strava_auth_end - strava_auth_start
 
         # Attempt to save tokens and user details in database
-        messages.append('7. Query Database: Attempting...')
+        logging_messages.append('6. Query Database: Attempting...')
 
         # Timestamp before database process starts
         db_start = time.time() 
@@ -168,7 +171,7 @@ def exchange_token():
             db_end = time.time()
             # Store DB operation time in a variable.
             db_time = db_end - db_start
-            messages.append(f'8. Save to Database: Success! pk_id = {pk_id}, and total_refresh_checks={total_refresh_checks}')  
+            logging_messages.append(f'7. Save to Database: Success! pk_id = {pk_id}, and total_refresh_checks={total_refresh_checks}')  
 
             # fetch the activities
             try:
@@ -197,7 +200,9 @@ def exchange_token():
                 messages.append(f"{model_choice.capitalize()} fact: {gpt_fact}")
 
             # Prepare the HTML and Bootstrap template
-            return render_template('response.html', messages=messages)
+            return render_template('response.html', messages=messages, logging_messages=logging_messages)
+
+
 
     except requests.exceptions.Timeout:
         # If the request to Strava API times out
@@ -227,7 +232,8 @@ def exchange_token():
             ]
             
             # Prepare the HTML and Bootstrap template
-            return render_template('response.html', messages=messages)
+            return render_template('response.html', messages=messages, logging_messages=logging_messages)
+
             
         else:
             return error_message

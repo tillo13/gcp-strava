@@ -34,7 +34,7 @@ def deploy_app():
     print("Deployment done.")
     
     # Delete if needed
-    if len(versions) > 10:
+    if len(versions) > 30:
         versions = get_versions("default")
         versions_to_delete = versions[10:]
         delete_versions("default", versions_to_delete)

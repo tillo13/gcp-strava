@@ -1,5 +1,5 @@
 # 2023july10-1048
-from flask import Flask, request, redirect, Markup, render_template, redirect, url_for, session  # Flask for building web application
+from flask import Flask, request, redirect, Markup, render_template, redirect, url_for, session, send_from_directory  # Flask for building web application
 import requests                                                        # For making HTTP requests to Stava API
 import psycopg2                                                        # PostgresSQL library for handling database operations
 import sqlalchemy
@@ -41,6 +41,10 @@ app.secret_key = 'super duper secret key'  # super duper secret cause Flask want
 @app.errorhandler(500)
 def internal_error(error):
     return redirect(SITE_HOMEPAGE)
+
+@app.route('/map/<map_name>', methods=['GET'])
+def map(map_name):
+    return send_from_directory('/tmp', map_name)
 
 # Home endpoint to serve the login link for Strava
 @app.route('/', methods=['GET', 'POST'])

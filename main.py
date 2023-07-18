@@ -77,6 +77,10 @@ def deauthorize():
 def about():
     return render_template('about.html')
 
+@app.route('/profile')
+def profile():
+    return render_template('profile.html')
+
 # Login endpoint to redirect users to the Stava login page
 @app.route('/login', methods=['GET'])
 def login():
@@ -153,11 +157,9 @@ def exchange_token():
         
         access_token = data['access_token']
         refresh_token = data['refresh_token']
-        expires_at = data['expires_at']        
+        expires_at = data['expires_at']
         athlete_id = data['athlete']['id']
         expires_in = data['expires_in']
-        #add in a session id to create a profile for them once logged in: 
-        session["user_id"] = athlete_id
 
         # Timestamp right after Strava authorization
         strava_auth_end = time.time()

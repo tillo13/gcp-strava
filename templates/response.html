@@ -65,6 +65,11 @@
 
     <div class="tab-pane fade" id="map" role="tabpanel" aria-labelledby="map-tab">
         <p>Google Map forthcoming...</p>
+        {% if summary_polyline != "N/A" %}
+            <p>Summary Polyline: {{summary_polyline}}</p>
+        {% else %}
+            <p>No Summary Polyline Found</p>
+        {% endif %}
         <pre>{{ activities | tojson(4) }}</pre>
     </div>
 </div>

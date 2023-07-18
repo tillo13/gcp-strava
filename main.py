@@ -182,8 +182,10 @@ def exchange_token():
                 return '<br>'.join(messages)
 
             # Once we have the response, we can go through each activity and print the details
+            activity_id = None 
             messages.append('Your latest Strava activity...')
             for num, activity in enumerate(activities, 1):
+                activity_id = activity['id'] 
                 date = parse(activity['start_date_local'])  # parses to datetime
                 formatted_date = date.strftime('%Y-%m-%d %H:%M:%S')  # to your preferred string format
                 distance = activity.get('distance', 'N/A')
@@ -199,7 +201,8 @@ def exchange_token():
                 messages.append(f"{model_choice.capitalize()} fact: {gpt_fact}")
 
             # Prepare the HTML and Bootstrap template
-            return render_template('response.html', messages=messages, logging_messages=logging_messages)
+            return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id)
+
 
 
 
@@ -231,7 +234,9 @@ def exchange_token():
             ]
             
             # Prepare the HTML and Bootstrap template
-            return render_template('response.html', messages=messages, logging_messages=logging_messages)
+            return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id)
+
+
 
             
         else:

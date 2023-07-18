@@ -13,10 +13,15 @@ def generate_map(summary_polyline):
         latitudes, longitudes = zip(*route)
         gmap = gmplot.GoogleMapPlotter(latitudes[0], longitudes[0], 16, apikey=GOOGLE_MAPS_API_KEY)
         gmap.plot(latitudes, longitudes, 'cornflowerblue', edge_width=10)
-        map_file = f"/tmp/map_{int(time.time())}.html"
-        gmap.draw(map_file)
-        logging.info(f"Map created and saved in path {map_file}")   
-        return map_file, True
+        map_full_path = f"/tmp/map_{int(time.time())}.html"
+        gmap.draw(map_full_path)
+        logging.info(f"Map created and saved in path {map_full_path}")   
+        
+        # Get just the filename
+        map_file_name = map_full_path.split('/')[-1]  # This will split on '/', and take the last part
+        logging.info(f"Map file name: {map_file_name}")
+
+        return map_file_name, True  # Return just the filename (not the whole path)
     else:
         logging.info(f"No summary_polyline available.")
         return None, False

@@ -2,6 +2,10 @@ import subprocess
 import json
 import time
 
+# Set the maximum versions value here
+VERSION_MAX = 15
+print(f"You have chosen to keep {VERSION_MAX} versions of your app.")
+
 # Function to get versions of a service
 def get_versions(service_name):
     result = subprocess.run(["gcloud", "app", "versions", "list", "--service", service_name, "--format", "json"], stdout=subprocess.PIPE, check=True)
@@ -25,18 +29,18 @@ def deploy_app():
     print(f"The latest version is {versions[0]['id']}.")
     
     # Deploy new version
-    if len(versions) > 10:
-        print(f"More than 10 versions exist. Deploying new version and then {len(versions)-9} versions will be deleted.")
+    if len(versions) > VERSION_MAX:
+        print(f"More than {VERSION_MAX} versions exist. Deploying new version and then {len(versions)-(VERSION_MAX-1)} versions will be deleted.")
     else:
-        print("Less than 10 versions exist, no need to delete versions.")
+        print("Less than or equal to {VERSION_MAX} versions exist, no need to delete versions.")
     print("Deploying...")
     subprocess.run(["gcloud", "app", "deploy", "--quiet", "--project=gcp-strava"], check=True)
     print("Deployment done.")
     
     # Delete if needed
-    if len(versions) > 30:
+    if len(versions) > VERSION_MAX:
         versions = get_versions("default")
-        versions_to_delete = versions[10:]
+        versions_to_delete = versions[VERSION_MAX:]
         delete_versions("default", versions_to_delete)
 
     end_time = time.time()

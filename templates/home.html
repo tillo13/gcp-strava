@@ -4,17 +4,50 @@
 <h3>Strava + ChatGPT</h3>
 <p class="lead">{{ message }}</p>
 <hr/>
-<h4>Select a model below then click "Connect with Strava":</h4>
-    <form method="POST" class="mb-3">            
+
+<form method="POST" class="mb-3">      
+    <button type="submit" formaction="/" class="btn mt-3" style="background: none; padding: 0; border: none;">
+        <img src="https://storage.googleapis.com/gcp-strava.appspot.com/btn_strava_connectwith_orange%402x.png" alt="Connect with Strava" class="img-fluid">
+    </button> <br>
+
+    <button id="moreOptionsButton" class="btn btn-link no-underlined-link" type="button" data-toggle="collapse" data-target="#moreOptions" aria-expanded="false" aria-controls="moreOptions">
+        <em><span id="expandOptionsSign" style="color: black; font-size: xx-large;">+</span> more options...</em>
+    </button>
+
+    <div class="collapse" id="moreOptions">
+        <p class="mt-3 mb-3">Feel free to choose your ChatGPT model:</p>
+
         <div class="form-check">
-            <input type="radio" class="form-check-input" id="model1" name="model_choice" value="text-davinci-003" checked>
+            <input type="radio" class="form-check-input" id="model1" name="model_choice" value="text-davinci-003">
             <label class="form-check-label" for="model1">text-davinci-003 (Faster but less fun facts.)</label>
         </div>
         <div class="form-check">
-            <input type="radio" class="form-check-input" id="model2" name="model_choice" value="gpt-3.5-turbo">
+            <input type="radio" class="form-check-input" id="model2" name="model_choice" value="gpt-3.5-turbo" checked>
             <label class="form-check-label" for="model2">gpt-3.5-turbo (Slower, but more fun facts.)</label>
         </div>
-        <button type="submit" formaction="/" class="btn mt-3" style="background: none; padding: 0; border: none;">
-            <img src="https://storage.googleapis.com/gcp-strava.appspot.com/btn_strava_connectwith_orange%402x.png" alt="Connect with Strava" class="img-fluid">
-        </button>
+    </div>
+</form>
+
+<style>
+.no-underlined-link {
+    text-decoration: none !important;
+}
+
+#expandOptionsSign {
+    display: inline-block;
+    transition: transform 0.6s ease-in-out;
+}
+</style>
+
+<script src="https://code.jquery.com/jquery-3.6.0.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+<script>
+    $(document).ready(function() {
+        $('#moreOptions').on('show.bs.collapse', function () {
+            $('#expandOptionsSign').css("transform", "rotate(45deg)");
+        }).on('hide.bs.collapse', function () {
+            $('#expandOptionsSign').css("transform", "rotate(0deg)");
+        });
+    });
+</script>
 {% endblock %}

@@ -19,6 +19,16 @@ def get_activities(access_token):
     activities = response.json()
     return activities
 
+def deauthorize(access_token):
+    url = "https://www.strava.com/oauth/deauthorize"
+    headers = {
+        'Authorization': f'Bearer {access_token}'
+    }
+    response = requests.post(url, headers=headers)
+    if response.status_code != 200:
+        raise Exception('Failed to deauthorize athlete')
+    return response.json()
+
 def process_auth_code(client_id, client_secret, code):
     # Use STRAVA_TOKEN_URL from config
     url = STRAVA_TOKEN_URL

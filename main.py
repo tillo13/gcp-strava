@@ -51,7 +51,7 @@ def map(map_name):
 def home():
     message = ("We'll grab your most recent activity data from Strava, pass the distance to chatGPT, and provide some fun distance-related facts. "
                "We don't save any of the data from the query; it's all stateless in this demo. "
-               "This also means you'll most likely get a brand new fact each time.")
+               "This also means you'll most likely get a brand new fact each time you're here.")
 
     if request.method == 'POST':
         model_choice = request.form.get('model_choice')
@@ -59,6 +59,19 @@ def home():
     
     # We use Jinja2's templating engine which comes with Flask. 
     return render_template('home.html', message=message)
+
+@app.route('/deauthorize', methods=['POST'])
+def deauthorize():
+    # Ensure the 'access_token' is in the request form data
+    if 'access_token' not in request.form:
+        return 'Access token required', 400
+    access_token = request.form.get('access_token')
+    # Call deauthorize() function from strava_utils
+    try:
+        strava_utils.deauthorize(access_token)
+        return 'Successfully deauthorized', 200
+    except Exception as e:
+        return str(e), 400
 
 @app.route('/about')
 def about():
@@ -140,9 +153,11 @@ def exchange_token():
         
         access_token = data['access_token']
         refresh_token = data['refresh_token']
-        expires_at = data['expires_at']
+        expires_at = data['expires_at']        
         athlete_id = data['athlete']['id']
         expires_in = data['expires_in']
+        #add in a session id to create a profile for them once logged in: 
+        session["user_id"] = athlete_id
 
         # Timestamp right after Strava authorization
         strava_auth_end = time.time()

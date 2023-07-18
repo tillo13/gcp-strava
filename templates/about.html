@@ -1,6 +1,37 @@
 {% extends "default.html" %}
 
 {% block content %}
-<h3>About + Github</h3>
-<em>Codebase + more details</em>: <a href="https://github.com/tillo13/gcp-strava" target="_blank">https://github.com/tillo13/gcp-strava</a>.
+<h3>About This Project</h3>
+
+<p>I built this as a Google App Engine application, combining Strava and OpenAI's chatGPT for an interactive and testing of some APIs.  Once a user logs in with their Strava accounts, it fetches their most recent activity data, and then uses OpenAI's chatGPT model to generate intriguing trivia about global locations that roughly correspond to the distance covered in their activity. </p>
+
+<h4>Behind the Scenes: How the Application Works</h4>
+
+<p>Each interaction with this application involves exchanges between multiple tech stacks.</p>
+
+<ol>
+    <li><strong>Strava Login:</strong> We start with interfaces for users to log in and authorize their Strava accounts, allowing the application to access their activity data. This process happens securely and swiftly, thanks to Strava's OAuth technology.</li>
+
+    <li><strong>Fetching Strava Data:</strong> Once logged in, the application retrieves your latest workout data from Strava. It specifically fetches the distance covered in your most recent activity.</li>
+
+    <li><strong>Engaging chatGPT:</strong> The magic begins here! The application sends the fetched distance to the chatGPT model, asking it to generate trivia about two points on earth that are approximately the same distance apart. Thanks to OpenAI’s advanced natural language processing algorithms, chatGPT produces engaging and interesting facts, transforming your workout stats into a fun geographical exploration!</li>
+
+    <li><strong>Results Display:</strong> GPT's fact, in addition to your Strava activity's details, are then displayed on the response page. You will also see a Google map of your latest activity (if available).</li>
+
+</ol>
+
+<h4>More info behind the code</h4>
+
+<p>All this magic results from an intricate ballet of Python code, the Flask web framework, psycopg2 for PostgreSQL database operations, SQLAlchemy for ORM, and libraries to interact with the Strava and OpenAI APIs. All while handling any exceptions that could occur and providing detailed log information about each operation.</p>
+
+<p>The application, hosted on Google Cloud Platform's App Engine, is structured as a series of Python script files each having specific responsibilities. They work together seamlessly, driven by the principles of Object-Oriented Programming and Test-Driven Development, ensuring robustness and ease of maintenance.</p>
+
+<p>The 'config.py' script handles configuration details, including secret keys, API endpoints and database credentials. The 'chatgpt_utils.py' and 'strava_utils.py' scripts interact with OpenAI's chatGPT and Strava API respectively. Another script 'db_utils.py' manages database interactions, while 'main.py' brings it all together, orchestrating interactions between these components and handling HTTP request-response life cycle.</p>
+
+<p>Finally, 'map_ride.py' generates a Google Map of your latest Strava activity (if polyline data is available from Strava). HTML templates (dinamically rendered by Jinja2 engine) provide the user interface, beautifully presenting the data to you.</p>
+
+<h3>The Source Code and More</h3>
+
+<p>If you're interested in diving even deeper into how this application works, the full codebase is documented and available on <a href="https://github.com/tillo13/gcp-strava" target="_blank">GitHub</a>. If you have questions or suggestions on next steps, don't hesitate to create an issue or a pull request – your contributions are welcome!</p>
+
 {% endblock %}

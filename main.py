@@ -11,6 +11,7 @@ from dateutil.parser import parse                                      # For par
 from psycopg2 import OperationalError
 from threading import Thread
 from queue import Queue
+from map_ride import generate_map
 from google.cloud import secretmanager
 
 def get_secret_version(project_id, secret_id, version_id="latest"):
@@ -203,10 +204,12 @@ def exchange_token():
                 messages.append(f"{model_choice.capitalize()} fact: {gpt_fact}")
 
             # Prepare the HTML and Bootstrap template
-            return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id, summary_polyline=summary_polyline)
-
-
-
+            map_file = None
+            try:
+                map_file, _ = generate_map(summary_polyline)
+            except Exception as e: 
+                print(f"Error in generating map: {e}") 
+            return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id, summary_polyline=summary_polyline,map_file=map_file)
 
     except requests.exceptions.Timeout:
         # If the request to Strava API times out
@@ -236,10 +239,7 @@ def exchange_token():
             ]
             
             # Prepare the HTML and Bootstrap template
-            return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id,summary_polyline=summary_polyline)
-
-
-
+            return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id,summary_polyline=summary_polyline,map_file=map_file)
             
         else:
             return error_message

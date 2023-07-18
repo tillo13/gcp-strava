@@ -27,3 +27,7 @@ DB_PASSWORD = get_secret_version(GCP_PROJECT_ID, GOOGLE_SECRET_DB_ID)
 # OpenAI API Configurations
 OPENAI_API_KEY_ID = "OPENAI_API_KEY"
 OPENAI_SECRET_KEY = get_secret_version(GCP_PROJECT_ID, OPENAI_API_KEY_ID)
+
+# Google Maps API Configurations
+GOOGLE_MAPS_SECRET_API_ID = "google_maps_api_key"
+GOOGLE_MAPS_API_KEY = get_secret_version(GCP_PROJECT_ID, GOOGLE_MAPS_SECRET_API_ID)

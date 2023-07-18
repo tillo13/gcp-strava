@@ -32,7 +32,7 @@ def deploy_app():
     if len(versions) > VERSION_MAX:
         print(f"More than {VERSION_MAX} versions exist. Deploying new version and then {len(versions)-(VERSION_MAX-1)} versions will be deleted.")
     else:
-        print("Less than or equal to {VERSION_MAX} versions exist, no need to delete versions.")
+        print(f"Less than or equal to {VERSION_MAX} versions exist, no need to delete versions.")
     print("Deploying...")
     subprocess.run(["gcloud", "app", "deploy", "--quiet", "--project=gcp-strava"], check=True)
     print("Deployment done.")

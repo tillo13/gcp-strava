@@ -93,7 +93,7 @@ def save_token_info(connection, STRAVA_CLIENT_ID, athlete_id, access_token, refr
         result = connection.execute(
             text("""
                 INSERT INTO strava_access_tokens (client_id, athlete_id, access_token, refresh_token, expires_at, expires_in, last_refreshed_by, current_scope)
-                VALUES (:client_id, :athlete_id, :access_token, :refresh_token, :expires_at, :expires_in,'gcp-strava.wl.r.appspot.com', : current_scope)
+                VALUES (:client_id, :athlete_id, :access_token, :refresh_token, :expires_at, :expires_in,'gcp-strava.wl.r.appspot.com', :current_scope)
                 RETURNING pk_id
             """),
             {

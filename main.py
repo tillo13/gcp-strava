@@ -86,6 +86,8 @@ def login():
 def exchange_token():
     start_time = time.time()
     model_choice=request.args.get('model_choice')
+    strava_time = 0  # Initialize strava_time
+    db_time = 0  # Initialize db_time
     #this is just the default messages on the response.html page
     messages = []
     #set values to put in the "logging tab"
@@ -103,6 +105,9 @@ def exchange_token():
     strava_auth_start = time.time()
     try:
         code = request.args.get('code')
+        strava_auth_end = time.time()
+        strava_time = strava_auth_end - strava_auth_start   
+        db_start = time.time()
 
         # Check if 'code' is valid
         if not code or not isinstance(code, str):
@@ -189,6 +194,7 @@ def exchange_token():
             # Once we have the response, we can go through each activity and print the details
             activity_id = None 
             summary_polyline = None
+            chatgpt_time = 0  # Initialize chatgpt_time
             messages.append('Your latest Strava activity...')
             for num, activity in enumerate(activities, 1):
                 activity_id = activity['id'] 

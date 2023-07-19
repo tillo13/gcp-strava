@@ -37,7 +37,7 @@ result_queue = Queue()
 
 # An instance of Flask is our WSGI (Web Server Gateway Interface) application.
 app = Flask(__name__)
-app.secret_key = 'super duper secret key'  # super duper secret cause Flask wants it
+app.secret_key = 'super duper secret key'  # super duper secret cause Flask wants it for session info
 @app.errorhandler(500)
 def internal_error(error):
     return redirect(SITE_HOMEPAGE)
@@ -79,7 +79,10 @@ def about():
 
 @app.route('/profile')
 def profile():
-    return render_template('profile.html')
+    authentication_status = "Not Authenticated"
+    if 'authenticated' in session and session['authenticated']:
+        authentication_status = "Authenticated"
+    return render_template('profile.html', status=authentication_status)
 
 # Login endpoint to redirect users to the Stava login page
 @app.route('/login', methods=['GET'])
@@ -102,6 +105,7 @@ def login():
 @app.route('/exchange_token', methods=['GET'])
 def exchange_token():
     start_time = time.time()
+    data = {}  # Initialize data as an empty dictionary
     model_choice=request.args.get('model_choice')
     strava_time = 0  # Initialize strava_time
     db_time = 0  # Initialize db_time
@@ -133,6 +137,10 @@ def exchange_token():
         # Process the 'code' to get access and refresh tokens
         try:
             data = strava_utils.process_auth_code(STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, code)
+            # The session is a secure place to store information between requests. 
+            # When a user successfully authenticates, set session['authenticated'] to True.
+            if 'access_token' in data:
+                session['authenticated'] = True
         except requests.exceptions.RequestException as e:
             return f"Error occurred while processing the code: {str(e)}."
 

@@ -1,7 +1,69 @@
 {% extends "default.html" %}
 
 {% block content %}
-<h3>Profile</h3>
-<p class="lead">Status: {{ status }}</p>
-<hr/>
+    <div class="container py-4">
+        <div class="row justify-content-left">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-body">
+                        {% if status == "Authenticated" %}
+                            <img class="rounded-circle mb-3"src="{{ profile.profile }}" alt="{{ profile.firstname }} {{ profile.lastname}}" width="150">
+                            <h3>{{ profile.firstname }} {{ profile.lastname }}</h3>
+                            <hr>
+                            <p><strong>ID:</strong> {{ profile.id }}</p>
+                            <p><strong>Username:</strong> {{ profile.username }}</p>
+                            <p><strong>Biography:</strong> {{ profile.bio }}</p>
+                            <p><strong>Location:</strong> {{ profile.city }}, {{ profile.state }}, {{ profile.country }}</p>
+                            <p><strong>Gender:</strong> {{ profile.sex }}</p>
+                            <p><strong>Premium User:</strong> {{ 'Yes' if profile.premium else 'No' }}</p>
+                            <p><strong>Summit:</strong> {{ 'Yes' if profile.summit else 'No' }}</p>
+                            <p><strong>Account Created At:</strong> {{ profile.created_at }}</p>
+                            <p><strong>Account Updated At:</strong> {{ profile.updated_at }}</p>
+                            <p><strong>Blocked:</strong> {{ 'Yes' if profile.blocked else 'No' }}</p>
+                            <p><strong>Can Follow:</strong> {{ 'Yes' if profile.can_follow else 'No' }}</p>
+                            <p><strong>Follower Count:</strong> {{ profile.follower_count }}</p>
+                            <p><strong>Friend Count:</strong> {{ profile.friend_count }}</p>
+                            <p><strong>Mutual Friend Count:</strong> {{ profile.mutual_friend_count }}</p>
+                            <p><strong>FTP:</strong> {{ profile.ftp if profile.ftp else 'N/A' }}</p>
+                            <p><strong>Weight:</strong> {{ profile.weight if profile.weight else 'N/A' }}</p>
+                            <p><strong>Is Winback via Upload:</strong> {{ 'Yes' if profile.is_winback_via_upload else 'No' }}</p>
+                            <p><strong>Is Winback via View:</strong> {{ 'Yes' if profile.is_winback_via_view else 'No' }}</p>
+                            {% if profile.clubs %}
+                                <p><strong>Club Memberships:</strong> 
+                                {% for club in profile.clubs %}
+                                {{ club.name }}
+                                {% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                                </p>
+                            {% else %}
+                            <p><strong>Club Memberships:</strong> N/A</p>
+                            {% endif %}
+                            {% if profile.bikes %}
+                                <p><strong>Bike(s):</strong>
+                                    {% for bike in profile.bikes %}
+                                        {{ bike.name }} (Primary: {{ bike.primary }}, Distance: {{ bike.distance }})
+                                        {% if not loop.last %}, {% endif %}
+                                    {% endfor %}
+                                </p>
+                            {% else %}
+                            <p><strong>Bike(s):</strong> N/A</p>
+                            {% endif %}
+                            {% if profile.shoes %}
+                                <p><strong>Shoe(s):</strong>
+                                    {% for shoe in profile.shoes %}
+                                        {{ shoe.name }} (Primary: {{ shoe.primary }}, Distance: {{ shoe.distance }})
+                                        {% if not loop.last %}, {% endif %}
+                                    {% endfor %}
+                                </p>
+                            {% else %}
+                            <p><strong>Shoe(s):</strong> N/A</p>
+                            {% endif %}
+                        {% else %}
+                            <p>You are not authenticated. Please authenticate first to view profile.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}

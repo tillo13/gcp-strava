@@ -79,10 +79,21 @@ def about():
 
 @app.route('/profile')
 def profile():
-    authentication_status = "Not Authenticated"
     if 'authenticated' in session and session['authenticated']:
-        authentication_status = "Authenticated"
-    return render_template('profile.html', status=authentication_status)
+        access_token = session.get('access_token')
+        if access_token is None:
+            return render_template('profile.html', status="Not Authenticated", athlete_id='None')
+
+        athlete_id = session.get('athlete_id', 'None')
+        try:
+            # Get athlete profile from the strava_utils
+            athlete_profile = strava_utils.get_athlete_profile(access_token)
+            return render_template('profile.html', status='Authenticated', athlete_id=athlete_id, profile=athlete_profile)
+        except Exception as e:
+            # Add logging or error handling as needed
+            return str(e), 400
+    else:
+        return render_template('profile.html', status="Not Authenticated", athlete_id='None')
 
 # Login endpoint to redirect users to the Stava login page
 @app.route('/login', methods=['GET'])
@@ -141,6 +152,10 @@ def exchange_token():
             # When a user successfully authenticates, set session['authenticated'] to True.
             if 'access_token' in data:
                 session['authenticated'] = True
+                session['access_token'] = data['access_token'] # store for profile tab
+                # store the athlete_id in the session
+                athlete_id = data['athlete']['id']
+                session['athlete_id'] = athlete_id
         except requests.exceptions.RequestException as e:
             return f"Error occurred while processing the code: {str(e)}."
 
@@ -168,6 +183,7 @@ def exchange_token():
         expires_at = data['expires_at']
         athlete_id = data['athlete']['id']
         expires_in = data['expires_in']
+
 
         # Timestamp right after Strava authorization
         strava_auth_end = time.time()
@@ -235,8 +251,12 @@ def exchange_token():
 
                 
                 # go get chatGPT data
-                gpt_fact, chatgpt_time = get_chatgpt_fact(distance, model_choice, OPENAI_SECRET_KEY)  
-                messages.append(f"{model_choice.capitalize()} fact: {gpt_fact}")
+                try:
+                    gpt_fact, chatgpt_time = get_chatgpt_fact(distance, model_choice, OPENAI_SECRET_KEY)
+                    messages.append(f"{model_choice.capitalize()} fact: {gpt_fact}")
+                except Exception as e:
+                    print(f"Failed to get chatGPT fact. Error: {e}")
+                    chatgpt_time = 0
 
             # Prepare the HTML and Bootstrap template
             map_file = None

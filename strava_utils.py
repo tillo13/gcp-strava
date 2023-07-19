@@ -19,14 +19,17 @@ def get_activities(access_token):
     activities = response.json()
     return activities
 
-def deauthorize(access_token):
-    url = "https://www.strava.com/oauth/deauthorize"
+def get_athlete_profile(access_token):
+    url = "https://www.strava.com/api/v3/athlete"
     headers = {
         'Authorization': f'Bearer {access_token}'
     }
-    response = requests.post(url, headers=headers)
+    response = requests.get(url, headers=headers)
     if response.status_code != 200:
-        raise Exception('Failed to deauthorize athlete')
+        print(f"Status Code: {response.status_code}")
+        print(f"Reason: {response.reason}")
+        print(f"Content: {response.content}")
+        raise Exception('Failed to fetch athlete profile')
     return response.json()
 
 def process_auth_code(client_id, client_secret, code):

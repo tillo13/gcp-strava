@@ -1,65 +1,106 @@
 {% extends "default.html" %}
 
+{% block header %}
+    <style>
+        .bg-orange {
+            background-color: #FC4C02; /* Strava's official color */
+            color: white;
+        }
+        .bg-lightorange {
+            background-color: #FF7043; /* A lighter shade of orange */
+            color: white;
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
-    <div class="container py-4">
-        <div class="row justify-content-left">
-            <div class="col-md-8">
-                <div class="card">
+    <div class="container">
+        <h3>{{ profile.firstname }} {{ profile.lastname }}</h3>
+        <hr/>
+        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" id="profile-tab" data-toggle="pill" href="#profile" role="tab" aria-controls="profile" aria-selected="true">Profile</a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" id="activity-tab" data-toggle="pill" href="#activity" role="tab" aria-controls="activity" aria-selected="false">Activity</a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" id="equipment-tab" data-toggle="pill" href="#equipment" role="tab" aria-controls="equipment" aria-selected="false">Equipment</a>
+            </li>
+        </ul>
+        <div class="tab-content" id="pills-tabContent">
+            <div class="tab-pane fade show active" id="profile" role="tabpanel" aria-labelledby="profile-tab">
+                <div class="card mb-3">
+                    <div class="card-header bg-orange text-white">
+                        <h5>Profile Information:</h5>
+                    </div>
                     <div class="card-body">
-                        {% if status == "Authenticated" %}
-                            <img class="rounded-circle mb-3"src="{{ profile.profile }}" alt="{{ profile.firstname }} {{ profile.lastname}}" width="150">
-                            <h3>{{ profile.firstname }} {{ profile.lastname }}</h3>
-                            <hr>
-                            <p><strong>ID:</strong> {{ profile.id }}</p>
-                            <p><strong>Username:</strong> {{ profile.username }}</p>
-                            <p><strong>Biography:</strong> {{ profile.bio }}</p>
-                            <p><strong>Location:</strong> {{ profile.city }}, {{ profile.state }}, {{ profile.country }}</p>
-                            <p><strong>Gender:</strong> {{ profile.sex }}</p>
-                            <p><strong>Premium User:</strong> {{ 'Yes' if profile.premium else 'No' }}</p>
-                            <p><strong>Summit:</strong> {{ 'Yes' if profile.summit else 'No' }}</p>
-                            <p><strong>Account Created At:</strong> {{ profile.created_at }}</p>
-                            <p><strong>Account Updated At:</strong> {{ profile.updated_at }}</p>
-                            <p><strong>Blocked:</strong> {{ 'Yes' if profile.blocked else 'No' }}</p>
-                            <p><strong>Can Follow:</strong> {{ 'Yes' if profile.can_follow else 'No' }}</p>
-                            <p><strong>Follower Count:</strong> {{ profile.follower_count }}</p>
-                            <p><strong>Friend Count:</strong> {{ profile.friend_count }}</p>
-                            <p><strong>Mutual Friend Count:</strong> {{ profile.mutual_friend_count }}</p>
-                            <p><strong>FTP:</strong> {{ profile.ftp if profile.ftp else 'N/A' }}</p>
-                            <p><strong>Weight:</strong> {{ profile.weight if profile.weight else 'N/A' }}</p>
-                            <p><strong>Is Winback via Upload:</strong> {{ 'Yes' if profile.is_winback_via_upload else 'No' }}</p>
-                            <p><strong>Is Winback via View:</strong> {{ 'Yes' if profile.is_winback_via_view else 'No' }}</p>
-                            {% if profile.clubs %}
-                                <p><strong>Club Memberships:</strong> 
-                                {% for club in profile.clubs %}
-                                {{ club.name }}
-                                {% if not loop.last %}, {% endif %}
-                                {% endfor %}
-                                </p>
-                            {% else %}
-                            <p><strong>Club Memberships:</strong> N/A</p>
-                            {% endif %}
-                            {% if profile.bikes %}
-                                <p><strong>Bike(s):</strong>
-                                    {% for bike in profile.bikes %}
-                                        {{ bike.name }} (Primary: {{ bike.primary }}, Distance: {{ bike.distance }})
-                                        {% if not loop.last %}, {% endif %}
-                                    {% endfor %}
-                                </p>
-                            {% else %}
-                            <p><strong>Bike(s):</strong> N/A</p>
-                            {% endif %}
-                            {% if profile.shoes %}
-                                <p><strong>Shoe(s):</strong>
-                                    {% for shoe in profile.shoes %}
-                                        {{ shoe.name }} (Primary: {{ shoe.primary }}, Distance: {{ shoe.distance }})
-                                        {% if not loop.last %}, {% endif %}
-                                    {% endfor %}
-                                </p>
-                            {% else %}
-                            <p><strong>Shoe(s):</strong> N/A</p>
-                            {% endif %}
+                        <img class="rounded-circle mb-3"src="{{ profile.profile }}" alt="{{ profile.firstname }} {{ profile.lastname}}" width="150">
+                        <p><strong>ID:</strong> {{ profile.id }}</p>
+                        <p><strong>Username:</strong> {{ profile.username }}</p>
+                        <p><strong>Biography:</strong> {{ profile.bio }}</p>
+                        <p><strong>Location:</strong> {{ profile.city }}, {{ profile.state }}, {{ profile.country }}</p>
+                        <p><strong>Gender:</strong> {{ profile.sex }}</p>
+                        <p><strong>Premium User:</strong> {{ 'Yes' if profile.premium else 'No' }}</p>
+                        <p><strong>Summit:</strong> {{ 'Yes' if profile.summit else 'No' }}</p>
+                        <p><strong>Account Created At:</strong> {{ profile.created_at }}</p>
+                        <p><strong>Account Updated At:</strong> {{ profile.updated_at }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="activity" role="tabpanel" aria-labelledby="activity-tab">
+                <div class="card mb-3">
+                    <div class="card-header bg-lightorange text-white">
+                        <h5>Activity Information:</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Blocked:</strong> {{ 'Yes' if profile.blocked else 'No' }}</p>
+                        <p><strong>Can Follow:</strong> {{ 'Yes' if profile.can_follow else 'No' }}</p>
+                        <p><strong>Follower Count:</strong> {{ profile.follower_count }}</p>
+                        <p><strong>Friend Count:</strong> {{ profile.friend_count }}</p>
+                        <p><strong>Mutual Friend Count:</strong> {{ profile.mutual_friend_count }}</p>
+                        <p><strong>Is Winback via Upload:</strong> {{ 'Yes' if profile.is_winback_via_upload else 'No' }}</p>
+                        <p><strong>Is Winback via View:</strong> {{ 'Yes' if profile.is_winback_via_view else 'No' }}</p>
+                        {% if profile.clubs %}
+                            <p><strong>Club Memberships:</strong> 
+                            {% for club in profile.clubs %}
+                            {{ club.name }}
+                            {% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                            </p>
                         {% else %}
-                            <p>You are not authenticated. Please authenticate first to view profile.</p>
+                        <p><strong>Club Memberships:</strong> N/A</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="equipment" role="tabpanel" aria-labelledby="equipment-tab">
+                <div class="card mb-3">
+                    <div class="card-header bg-orange text-white">
+                        <h5>Equipment Information:</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>FTP:</strong> {{ profile.ftp if profile.ftp else 'N/A' }}</p>
+                        <p><strong>Weight:</strong> {{ profile.weight if profile.weight else 'N/A' }}</p>
+                        {% if profile.bikes %}
+                            <p><strong>Bike(s):</strong>
+                                {% for bike in profile.bikes %}
+                                    {{ bike.name }} (Primary: {{ bike.primary }}, Distance: {{ bike.distance }})
+                                    {% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </p>
+                        {% else %}
+                        <p><strong>Bike(s):</strong> N/A</p>
+                        {% endif %}
+                        {% if profile.shoes %}
+                            <p><strong>Shoe(s):</strong>
+                                {% for shoe in profile.shoes %}
+                                    {{ shoe.name }} (Primary: {{ shoe.primary }}, Distance: {{ shoe.distance }})
+                                    {% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </p>
+                        {% else %}
+                        <p><strong>Shoe(s):</strong> N/A</p>
                         {% endif %}
                     </div>
                 </div>

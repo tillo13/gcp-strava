@@ -32,6 +32,18 @@ def get_athlete_profile(access_token):
         raise Exception('Failed to fetch athlete profile')
     return response.json()
 
+def deauthorize(access_token):
+    url = "https://www.strava.com/oauth/deauthorize"
+    headers = {
+        'Authorization': f'Bearer {access_token}'
+    }
+    response = requests.post(url, headers=headers)
+
+    if response.status_code != 200:
+        raise Exception(f"Failed to deauthorize the user: {response.content}")
+
+    return response.json()
+
 def process_auth_code(client_id, client_secret, code):
     # Use STRAVA_TOKEN_URL from config
     url = STRAVA_TOKEN_URL

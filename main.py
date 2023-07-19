@@ -63,15 +63,21 @@ def home():
 @app.route('/deauthorize', methods=['POST'])
 def deauthorize():
     # Ensure the 'access_token' is in the request form data
-    if 'access_token' not in request.form:
+    if 'access_token' not in session:
         return 'Access token required', 400
-    access_token = request.form.get('access_token')
+
+    access_token = session['access_token']
     # Call deauthorize() function from strava_utils
     try:
         strava_utils.deauthorize(access_token)
-        return 'Successfully deauthorized', 200
+        session.clear()  # clear all session data
+        return redirect('/')  # Redirect user to the main page
     except Exception as e:
-        return str(e), 400
+        # Here we handle the case where the access_token is invalid.
+        # This could be because it was already deauthorized in another session, 
+        # or it could have expired.
+        session.clear()  # clear all session data in any case
+        return redirect('/')  # redirect the user to the main/login page
 
 @app.route('/about')
 def about():
@@ -110,6 +116,24 @@ def login():
     url = "https://www.strava.com/oauth/authorize"
     r = requests.Request('GET', url, params=params).prepare()
     return redirect(r.url)
+
+#this is the static version of the response after connect with strava
+@app.route('/activity', methods=['GET'])
+def activity():
+    # Check if data exists in session
+    if 'activity_id' not in session:
+        return render_template('error.html', message="No results found! Please try again.")
+
+    # Retrieve data from session
+    messages = session['messages']
+    logging_messages = session['logging_messages']
+    activities = session['activities']
+    activity_id = session['activity_id']
+    summary_polyline = session['summary_polyline']
+    map_file = session['map_file']
+
+    return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id, summary_polyline=summary_polyline,map_file=map_file)
+
 
 # At this endpoint, after login, the client receives an auth code from Strava which we exchange 
 # for an access token that we can use to make requests to the Strava API. 
@@ -294,7 +318,14 @@ def exchange_token():
             ]
             
             # Prepare the HTML and Bootstrap template
+            session['messages'] = messages
+            session['logging_messages'] = logging_messages
+            session['activities'] = activities
+            session['activity_id'] = activity_id
+            session['summary_polyline'] = summary_polyline
+            session['map_file'] = map_file
             return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id,summary_polyline=summary_polyline,map_file=map_file)
+
             
         else:
             return error_message

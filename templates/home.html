@@ -1,32 +1,51 @@
 {% extends "default.html" %}
 
 {% block content %}
-<h3>Strava + ChatGPT</h3>
-<p class="lead">{{ message }}</p>
-<hr/>
+  <h3>Strava + ChatGPT</h3>
 
-<form method="POST" class="mb-3">      
-    <button type="submit" formaction="/" class="btn mt-3" style="background: none; padding: 0; border: none;">
-        <img src="https://storage.googleapis.com/gcp-strava.appspot.com/btn_strava_connectwith_orange%402x.png" alt="Connect with Strava" class="img-fluid">
-    </button> <br>
+  <!-- If user is authenticated, show success message and Revoke access button otherwise show Connect button and more options. -->
+  {% if 'authenticated' in session and session['authenticated'] %}
+      
+    <p class="lead">You're all current linked up with Strava. Go ahead and check out the 'Activity' section above to dive into your most recent activity data and some accompanying fun facts. And remember, it's all stateless in this demo so no data gets saved; if you want a new fun chatGPT fact, revoke access below and try again!</p>
+    <hr/>
 
-    <button id="moreOptionsButton" class="btn btn-link no-underlined-link" type="button" data-toggle="collapse" data-target="#moreOptions" aria-expanded="false" aria-controls="moreOptions">
-        <em><span id="expandOptionsSign" style="color: black; font-size: xx-large;">+</span> more options...</em>
-    </button>
-
-    <div class="collapse" id="moreOptions">
-        <p class="mt-3 mb-3">Feel free to choose your ChatGPT model:</p>
-
-        <div class="form-check">
-            <input type="radio" class="form-check-input" id="model1" name="model_choice" value="text-davinci-003">
-            <label class="form-check-label" for="model1">text-davinci-003 (Faster but less fun facts.)</label>
-        </div>
-        <div class="form-check">
-            <input type="radio" class="form-check-input" id="model2" name="model_choice" value="gpt-3.5-turbo" checked>
-            <label class="form-check-label" for="model2">gpt-3.5-turbo (Slower, but more fun facts.)</label>
-        </div>
+    <div class="mt-3 text-center">
+      <form method="POST" action="/deauthorize" class="d-inline">
+          <button type="submit" class="btn mb-3" style="background-color: #FC4C02; color: #FFFFFF; border: none; height: 70px; width: 200px;">
+            <i class="fas fa-unlink"></i> Revoke Strava Access
+          </button>
+      </form>
     </div>
-</form>
+
+  {% else %}
+
+    <p class="lead">{{ message }}</p>
+    <hr/>
+
+    <form method="POST" class="mb-3 text-center">      
+        <button type="submit" formaction="/" class="btn mt-3" style="background: none; padding: 0; border: none;">
+            <img src="https://storage.googleapis.com/gcp-strava.appspot.com/btn_strava_connectwith_orange%402x.png" alt="Connect with Strava" class="img-fluid">
+        </button> <br>
+
+        <button id="moreOptionsButton" class="btn btn-link no-underlined-link" type="button" data-toggle="collapse" data-target="#moreOptions" aria-expanded="false" aria-controls="moreOptions">
+            <em><span id="expandOptionsSign" style="color: black; font-size: xx-large;">+</span> more options...</em>
+        </button>
+
+        <div class="collapse" id="moreOptions">
+            <p class="mt-3 mb-3">Feel free to choose your ChatGPT model:</p>
+
+            <div class="form-check">
+                <input type="radio" class="form-check-input" id="model1" name="model_choice" value="text-davinci-003">
+                <label class="form-check-label" for="model1">text-davinci-003 (Faster but less fun facts.)</label>
+            </div>
+            <div class="form-check">
+                <input type="radio" class="form-check-input" id="model2" name="model_choice" value="gpt-3.5-turbo" checked>
+                <label class="form-check-label" for="model2">gpt-3.5-turbo (Slower, but more fun facts.)</label>
+            </div>
+        </div>
+    </form>
+
+  {% endif %}
 
 <style>
 .no-underlined-link {

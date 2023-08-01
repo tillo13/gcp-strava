@@ -17,7 +17,7 @@ from google.cloud import secretmanager
 #initialize logger
 logger = logging.getLogger(__name__)
 
-from zillow_utils import get_zillow_info
+from zillow_utils import get_zillow_info_1, get_zillow_info_2
 from config import ZILLOW_SERVER_TOKEN
 
 def get_secret_version(project_id, secret_id, version_id="latest"):
@@ -137,9 +137,10 @@ def activity():
     activity_id = session['activity_id']
     summary_polyline = session['summary_polyline']
     map_file = session['map_file']
-    zillow_return = session['zillow_return']
+    zillow_return_1 = session['zillow_return_1']
+    zillow_return_2 = session['zillow_return_2']
 
-    return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id, summary_polyline=summary_polyline,map_file=map_file, zillow_return=zillow_return)
+    return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id, summary_polyline=summary_polyline,map_file=map_file, zillow_return_1=zillow_return_1, zillow_return_2=zillow_return_2)
 
 
 # At this endpoint, after login, the client receives an auth code from Strava which we exchange 
@@ -291,18 +292,20 @@ def exchange_token():
 
             # Prepare the HTML and Bootstrap template
             map_file = None
-            zillow_return = None
+            zillow_return_1 = None
+            zillow_return_2 = None
             try:
-                map_file, _ = generate_map(summary_polyline)
-                zillow_return = get_zillow_info(ZILLOW_SERVER_TOKEN, summary_polyline)
-                session['zillow_return'] = zillow_return
-                #zillow_return = "testing123"
-                logger.info(f"Zillow return: {zillow_return}")
+                zillow_return_1 = get_zillow_info_1(ZILLOW_SERVER_TOKEN, summary_polyline)
+                zillow_return_2 = get_zillow_info_2(ZILLOW_SERVER_TOKEN, summary_polyline)
+                session['zillow_return_1'] = zillow_return_1
+                session['zillow_return_2'] = zillow_return_2
+
             except Exception as e: 
                 print(f"Error in getting Zillow information: {e}")
 
-            app.logger.info(f"Rendering template with zillow information: {zillow_return}")
-            return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id, summary_polyline=summary_polyline, map_file=map_file, zillow_return=zillow_return)
+            app.logger.info(f"zillow_return_1: {zillow_return_1}")
+            app.logger.info(f"zillow_return_2: {zillow_return_2}")
+            return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id, summary_polyline=summary_polyline, map_file=map_file, zillow_return_1=zillow_return_1, zillow_return_2=zillow_return_2)
 
     except requests.exceptions.Timeout:
         # If the request to Strava API times out
@@ -338,7 +341,7 @@ def exchange_token():
             session['activity_id'] = activity_id
             session['summary_polyline'] = summary_polyline
             session['map_file'] = map_file
-            return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id,summary_polyline=summary_polyline,map_file=map_file, zillow_return=zillow_return)
+            return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id,summary_polyline=summary_polyline,map_file=map_file, zillow_return_1=zillow_return_1, zillow_return_2=zillow_return_2)
 
             
         else:

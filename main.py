@@ -14,6 +14,12 @@ from queue import Queue
 from map_ride import generate_map
 from google.cloud import secretmanager
 
+#initialize logger
+logger = logging.getLogger(__name__)
+
+from zillow_utils import get_zillow_info
+from config import ZILLOW_SERVER_TOKEN
+
 def get_secret_version(project_id, secret_id, version_id="latest"):
     client = secretmanager.SecretManagerServiceClient()
     name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
@@ -131,8 +137,9 @@ def activity():
     activity_id = session['activity_id']
     summary_polyline = session['summary_polyline']
     map_file = session['map_file']
+    zillow_return = session['zillow_return']
 
-    return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id, summary_polyline=summary_polyline,map_file=map_file)
+    return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id, summary_polyline=summary_polyline,map_file=map_file, zillow_return=zillow_return)
 
 
 # At this endpoint, after login, the client receives an auth code from Strava which we exchange 
@@ -284,11 +291,18 @@ def exchange_token():
 
             # Prepare the HTML and Bootstrap template
             map_file = None
+            zillow_return = None
             try:
                 map_file, _ = generate_map(summary_polyline)
+                zillow_return = get_zillow_info(ZILLOW_SERVER_TOKEN, summary_polyline)
+                session['zillow_return'] = zillow_return
+                #zillow_return = "testing123"
+                logger.info(f"Zillow return: {zillow_return}")
             except Exception as e: 
-                print(f"Error in generating map: {e}") 
-            return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id, summary_polyline=summary_polyline,map_file=map_file)
+                print(f"Error in getting Zillow information: {e}")
+
+            app.logger.info(f"Rendering template with zillow information: {zillow_return}")
+            return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id, summary_polyline=summary_polyline, map_file=map_file, zillow_return=zillow_return)
 
     except requests.exceptions.Timeout:
         # If the request to Strava API times out
@@ -324,7 +338,7 @@ def exchange_token():
             session['activity_id'] = activity_id
             session['summary_polyline'] = summary_polyline
             session['map_file'] = map_file
-            return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id,summary_polyline=summary_polyline,map_file=map_file)
+            return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id,summary_polyline=summary_polyline,map_file=map_file, zillow_return=zillow_return)
 
             
         else:

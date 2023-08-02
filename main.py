@@ -13,6 +13,7 @@ from threading import Thread
 from queue import Queue
 from map_ride import generate_map
 from google.cloud import secretmanager
+from process_activity import process_activity
 
 #initialize logger
 logger = logging.getLogger(__name__)

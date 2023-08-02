@@ -42,4 +42,4 @@ def process_activity(access_token, model_choice, activity_id):
     messages.append('')
     messages.append(f"{model_choice.capitalize()} fact: {gpt_fact}")
 
-    return messages, map_file, summary_polyline, zillow_return_1, zillow_return_2, logging_messages, strava_time, chatgpt_time, zillow_time
+    return messages, map_file, summary_polyline, zillow_return_1, zillow_return_2, logging_messages, strava_time, chatgpt_time, zillow_time, activity

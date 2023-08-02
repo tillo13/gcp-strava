@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Strava + chatGPT</title>
+    <title>Strava + AI</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" rel="stylesheet">
@@ -81,6 +81,46 @@
 <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    <!-- Add the loading screen at the end of the body, before the scripts -->
+    <div id="loading-overlay" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.75);">
+        <div style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);">
+            <div class="spinner-border text-light" role="status">
+                <span class="sr-only">Processing that activity, one moment...</span>
+            </div>
+            <p class="text-light mt-2">Processing that activity, one moment...</p>
+            <p id="loading-timer" class="text-light mt-2">0.000s</p>
+        </div>
+    </div>
+
+    <script>
+        $("form").on("submit", function() {
+            $(this).find(".select-activity-btn").prop("disabled", true);
+            $(this).find(".select-activity-spinner").css("display", "inline-block");
+
+            // Show the screen-wide overlay
+            $("#loading-overlay").fadeIn();
+
+            // Start timer from when form is submitted
+            var startTime = new Date();
+            setInterval(function() {
+                var elapsed = new Date() - startTime;
+                var secondsElapsed = elapsed / 1000;  // convert milliseconds to seconds
+                $("#loading-timer").text(secondsElapsed.toFixed(3) + "s");  // show elapsed time with 3 decimal places
+            }, 100); // run every 100 milliseconds
+        });
+    </script>
+
+    <!-- Custom JavaScript to handle spinner on history page -->
+<script>
+    $(document).ready(function() {
+        $("form").on("submit", function() {
+            $(this).find(".select-activity-btn").prop("disabled", true);
+            $(this).find(".select-activity-spinner").css("display", "inline-block");
+        });
+    });
+    </script>
 
 </body>
 </html>

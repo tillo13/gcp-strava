@@ -17,7 +17,10 @@
                 <tr>
                     <td>
                         <form method="post" action="/activity_process">
-                            <button type="submit" class="btn btn-primary">Select</button>
+                            <button type="submit" class="btn btn-primary select-activity-btn">
+                                <span class="spinner-border spinner-border-sm select-activity-spinner" role="status" aria-hidden="true" style="display: none;"></span>
+                                Select
+                            </button>
                             <input type="hidden" name="activity_id" value="{{ id }}" />
                         </form>
                     </td>

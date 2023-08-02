@@ -1,4 +1,4 @@
-# 2023july10-1048
+# 2023aug2 445pm
 from flask import Flask, request, redirect, Markup, render_template, redirect, url_for, session, send_from_directory  # Flask for building web application
 import requests                                                        # For making HTTP requests to Stava API
 import psycopg2                                                        # PostgresSQL library for handling database operations
@@ -193,6 +193,8 @@ def activity_process():
 
 
 
+# At this endpoint, after login, the client receives an auth code from Strava which we exchange 
+# for an access token that we can use to make requests to the Strava API. 
 @app.route('/exchange_token', methods=['GET'])
 def exchange_token():
     start_time = time.time()
@@ -201,46 +203,57 @@ def exchange_token():
     strava_time = 0  # Initialize strava_time
     db_time = 0  # Initialize db_time
     zillow_time = 0 # Initialize zillow_time
-    zillow_start = time.time()
+    #this is just the default messages on the response.html page
     messages = []
+    #set values to put in the "logging tab"
     logging_messages = []
-    error_message = None
-    scope = None
+    error_message = None # Initialize an error message variable    
 
+    # Check if the 'error' is in the request arguments
     if 'error' in request.args:
         error = request.args.get('error')
-
+        
         if error == 'access_denied':
             return 'For the app to work, you have to allow us to see the data. <a href="/">Try again?</a>'
     
+    # Start the timer for Strava
     strava_auth_start = time.time()
     try:
         code = request.args.get('code')
         strava_auth_end = time.time()
-        strava_time = strava_auth_end - strava_auth_start
+        strava_time = strava_auth_end - strava_auth_start   
         db_start = time.time()
 
+        # Check if 'code' is valid
         if not code or not isinstance(code, str):
             return "Invalid 'code' supplied"
 
+        # Process the 'code' to get access and refresh tokens
         try:
             data = strava_utils.process_auth_code(STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, code)
-
+            # The session is a secure place to store information between requests. 
+            # When a user successfully authenticates, set session['authenticated'] to True.
             if 'access_token' in data:
                 session['authenticated'] = True
-                session['access_token'] = data['access_token']
+                session['access_token'] = data['access_token'] # store for profile tab
+                # store the athlete_id in the session
                 athlete_id = data['athlete']['id']
                 session['athlete_id'] = athlete_id
-
         except requests.exceptions.RequestException as e:
             return f"Error occurred while processing the code: {str(e)}."
 
+        # check if "code" processing was successful
         if "access_token" not in data:
             return render_template('error.html', message="We couldn't process your request with the permissions provided. <br>Please start again and provide the necessary permissions.")
 
+        # Get scope from the arguments
         scope = request.args.get('scope')
+
+        # Add explicit checks for each expected permission
         required_permissions = ['read', 'activity:read_all']
         granted_permissions = scope.split(',')
+
+        # Check for missing permissions and return an appropriate error message if any are missing
         missing_permissions = [permission for permission in required_permissions if permission not in granted_permissions]
 
         if missing_permissions:
@@ -254,42 +267,105 @@ def exchange_token():
         athlete_id = data['athlete']['id']
         expires_in = data['expires_in']
 
-        strava_auth_end = time.time()
-        strava_time = strava_auth_end - strava_auth_start
 
+        # Timestamp right after Strava authorization
+        strava_auth_end = time.time()
+        # Store Strava interaction time in a variable
+        strava_time = strava_auth_end - strava_auth_start
+        
+        # Add token exchange message to the list of messages
         logging_messages.append(f'1. Strava Auth: Success! (scope: {scope})')
         logging_messages.append(f'2. Athlete_ID ({athlete_id}): Success!')
         logging_messages.append(f'3. Token Expires: {expires_at}')
         logging_messages.append(f'4. Access Token: {access_token}')
         logging_messages.append(f'5. Refresh Token: {refresh_token}')
 
+        # Timestamp right after Strava authorization
         strava_auth_end = time.time()
+        # Store Strava interaction time in a variable
         strava_time = strava_auth_end - strava_auth_start
 
+        # Attempt to save tokens and user details in database
         logging_messages.append('6. Query GCP Postgres: Attempting...')
+
+        # Timestamp before database process starts
         db_start = time.time() 
+        
+        # Create database engine
         engine = create_conn()
-        if isinstance(engine, str):
+        if isinstance(engine, str):     # If could not create engine (error message is returned), return the engine error message
             return engine
 
+        # Connect to DB and execute SQL statements
         with engine.begin() as connection:
-            pk_id, total_refresh_checks = db_utils.save_token_info(connection, STRAVA_CLIENT_ID, athlete_id, access_token, refresh_token, expires_at, expires_in, scope)
-            db_end = time.time()
-            db_time = db_end - db_start
-            logging_messages.append(f'7. Save to GCP Database: Success! pk_id = {pk_id}, and total_refresh_checks= {total_refresh_checks}')  
 
-            # Fetch the latest activity
-            activities = strava_utils.get_activities(access_token,1)
-            
-            if len(activities) > 0:
-                activity_id = activities[0]['id'] 
-            
-                # Now we can use process_activity.py's function
-                messages, map_file, summary_polyline, zillow_return_1, zillow_return_2, logging_messages, strava_time, chatgpt_time, zillow_time, activity = process_activity(access_token, model_choice, activity_id)
-            else:
-                # Handle case if no activities
-                messages.append('No activities found. Please record an activity and try again.')
-            
+            # Call the new db_utils function to perform the insert/update operations
+            pk_id, total_refresh_checks = db_utils.save_token_info(connection, STRAVA_CLIENT_ID, athlete_id, access_token, refresh_token, expires_at, expires_in, scope)
+            # Timestamp right after database process
+            db_end = time.time()
+            # Store DB operation time in a variable.
+            db_time = db_end - db_start
+            logging_messages.append(f'7. Save to GCP Database: Success! pk_id = {pk_id}, and total_refresh_checks={total_refresh_checks}')  
+
+            # fetch the activities
+            try:
+                #for this first query, just get the latest 1
+                activities = strava_utils.get_activities(access_token,1)
+            except Exception as e:
+                # Handle any exceptions that arise from fetching the activities
+                messages.append(f"Error occurred while fetching activities: {str(e)}")
+                return '<br>'.join(messages)
+
+            # Once we have the response, we can go through each activity and print the details
+            activity_id = None 
+            summary_polyline = None
+            chatgpt_time = 0  # Initialize chatgpt_time
+            messages.append('Your latest Strava activity...')
+            for num, activity in enumerate(activities, 1):
+                activity_id = activity['id'] 
+                summary_polyline = activity['map'].get('summary_polyline', 'N/A')
+                date = parse(activity['start_date_local'])  # parses to datetime
+                formatted_date = date.strftime('%Y-%m-%d %H:%M:%S')  # to your preferred string format
+                distance = activity.get('distance', 'N/A')
+                moving_time = activity.get('moving_time', 'N/A')
+                average_speed = activity.get('average_speed', 'N/A')
+                type_ = activity.get('type', 'N/A')
+                messages.append(f"Activity {num}: {formatted_date} : {activity['name']} | Distance: {distance} meters | Moving Time: {moving_time // 60} minutes and {moving_time % 60} seconds | Average Speed: {average_speed} m/s | Type: {type_}")
+                messages.append('')
+
+                
+                # go get chatGPT data
+                try:
+                    gpt_fact, chatgpt_time = get_chatgpt_fact(distance, model_choice, OPENAI_SECRET_KEY)
+                    messages.append(f"{model_choice.capitalize()} fact: {gpt_fact}")
+                except Exception as e:
+                    print(f"Failed to get chatGPT fact. Error: {e}")
+                    chatgpt_time = 0
+
+            # Prepare the HTML and Bootstrap template
+            map_file = None
+            # Timestamp before Zillow process starts
+            zillow_start = time.time()
+
+            zillow_return_1 = None
+            zillow_return_2 = None
+            try:
+                #generate the google map file: 
+                map_file, _ = generate_map(summary_polyline)
+                
+                #generate the zillow lists
+                zillow_return_1 = get_zillow_info_1(ZILLOW_SERVER_TOKEN, summary_polyline)
+                zillow_return_2 = get_zillow_info_2(ZILLOW_SERVER_TOKEN, summary_polyline)
+                session['zillow_return_1'] = zillow_return_1
+                session['zillow_return_2'] = zillow_return_2
+
+            except Exception as e: 
+                print(f"Error in getting Zillow information: {e}")
+
+            app.logger.info(f"zillow_return_1: {zillow_return_1}")
+            app.logger.info(f"zillow_return_2: {zillow_return_2}")
+
+            # Timestamp right after Zillow process
             zillow_end = time.time()
             zillow_time = zillow_end - zillow_start
             logging_messages.append(f'8. Query Zillow: Success! (Zillow process took {zillow_time} seconds)')
@@ -297,15 +373,22 @@ def exchange_token():
             return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id, summary_polyline=summary_polyline, map_file=map_file, zillow_return_1=zillow_return_1, zillow_return_2=zillow_return_2)
 
     except requests.exceptions.Timeout:
+        # If the request to Strava API times out
         return 'The request timed out, please try again later.'
+
     except requests.exceptions.RequestException as e:
+        # If there was some other issue with the request
         return redirect(url_for('home')) 
+
     except psycopg2.OperationalError as ex:
+        # If there was an issue with the SQL
         return f'Database connection error: {str(ex)}'
-    except Exception as e:
-        return str(e)
+
+
     finally:
+        # Add logging only if there was no error previously
         if not error_message:
+            # Calculate time taken for the whole process
             roundtrip_time = time.time() - start_time
             logging_messages += [
                 '',
@@ -316,7 +399,17 @@ def exchange_token():
                 f'Zillow: {round(zillow_time, 3)} seconds.', 
                 f'Total time: {round(time.time() - start_time, 3)} seconds.',
             ]
+            
+            # Prepare the HTML and Bootstrap template
+            session['messages'] = messages
+            session['logging_messages'] = logging_messages
+            session['activities'] = activities
+            session['activity_id'] = activity_id
+            session['summary_polyline'] = summary_polyline
+            session['map_file'] = map_file
             return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id,summary_polyline=summary_polyline,map_file=map_file, zillow_return_1=zillow_return_1, zillow_return_2=zillow_return_2)
+
+            
         else:
             return error_message
 

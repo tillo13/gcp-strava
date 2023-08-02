@@ -8,6 +8,22 @@ logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 #initialize logger
 logger = logging.getLogger(__name__)
 
+def get_activity_by_id(access_token, activity_id):
+    logger.info(f"Fetching activity {activity_id} from the Strava API...")
+
+    url = f"https://www.strava.com/api/v3/activities/{activity_id}"
+    headers = {'Authorization': f'Bearer {access_token}'}
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise requests.exceptions.RequestException(response.json())
+
+    activity = response.json()
+    logger.info(f"Fetched activity: {activity}")
+
+    return activity
+
 def get_activities(access_token, activities_per_page):
     logger.info(f"Requesting activities from Strava API...")
 

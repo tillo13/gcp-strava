@@ -1,6 +1,30 @@
 {% extends "default.html" %}
 
 {% block content %}
-    <h3>Recent Activity IDs</h3>
-    <pre>{{ activity_ids }}</pre>
+    <h3>Recent Activity IDs and Names</h3>
+    <!--<pre>{{ activity_ids_and_names }}</pre> 
+    <h3>Recent Activity IDs and Names (Table Format)</h3> -->
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Action</th>
+                <th>Activity IDs</th>
+                <th>Activity Names</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for id, name in activity_ids_and_names %}
+                <tr>
+                    <td>
+                        <form method="post" action="/activity_process">
+                            <button type="submit" class="btn btn-primary">Select</button>
+                            <input type="hidden" name="activity_id" value="{{ id }}" />
+                        </form>
+                    </td>
+                    <td>{{ id }}</td>
+                    <td>{{ name }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 {% endblock %}

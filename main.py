@@ -54,29 +54,29 @@ def map(map_name):
 
 @app.route('/history', methods=['GET'])
 def history():
-
-  print("Before get_activities call, set activities to blank...")
-  activities = []
-  print("Attempt to get access token...")
-  access_token = session.get('access_token')
-  if access_token is None:
-    print("No access token found in session")
-    return redirect('/')
-  print("Access token:", access_token)
-
-  try: 
     print("Before get_activities call, set activities to blank...")
     activities = []
-    activities = strava_utils.get_activities(session['access_token'], 50)
-  except Exception as e:
-      print("Error getting activities from strava_util /history path: ", e)
-  print("After get_activities call...")
+    print("Attempt to get access token...")
+    access_token = session.get('access_token')
+    if access_token is None:
+        print("No access token found in session")
+        return redirect('/')
+    print("Access token:", access_token)
 
-  activity_ids = [activity['id'] for activity in activities]
+    try: 
+        print("Before get_activities call, set activities to blank...")
+        activities = []
+        activities = strava_utils.get_activities(session['access_token'], 50)
+    except Exception as e:
+        print("Error getting activities from strava_util /history path: ", e)
+    print("After get_activities call...")
 
-  logger.info(f"Fetched {len(activity_ids)} activity IDs: {activity_ids}")
-  logger.info(f"Rendering with activity_ids: {activity_ids}")  
-  return render_template('history.html', activity_ids=activity_ids)
+    # Create a new list that contains tuples with activity ID and name
+    activity_ids_and_names = [(activity['id'], activity['name']) for activity in activities]
+
+    logger.info(f"Fetched {len(activity_ids_and_names)} activity IDs and Names: {activity_ids_and_names}")
+    logger.info(f"Rendering with activity_ids_and_names: {activity_ids_and_names}")  
+    return render_template('history.html', activity_ids_and_names=activity_ids_and_names)
 
 # Home endpoint to serve the login link for Strava
 @app.route('/', methods=['GET', 'POST'])
@@ -169,7 +169,74 @@ def activity():
 
     return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id, summary_polyline=summary_polyline,map_file=map_file, zillow_return_1=zillow_return_1, zillow_return_2=zillow_return_2)
 
+@app.route('/activity_process', methods=['POST'])
+def activity_process():
+    activity_id = request.form.get('activity_id')
 
+    # Now you can process the activity_id
+    access_token = session.get('access_token')
+    if access_token is None:
+        return "No access token found in session", 400
+
+    # Initialize logging messages
+    logging_messages = []
+    
+    # Get the selected activity
+    try:
+        activity = strava_utils.get_activity_by_id(access_token, activity_id)
+        logging_messages.append(f'Successfully fetched the activity with id: {activity_id} using the access token')
+    except Exception as e:
+        print("Error occurred while fetching activity: ", e)
+        return str(e), 400
+
+    # Prepare to process the activity info like in 'exchange_token'
+    try:
+        messages = ['Your selected Strava activity...']
+        summary_polyline = activity.get('map', {}).get('summary_polyline', 'N/A')
+        date = parse(activity['start_date_local'])  # parse to datetime
+        formatted_date = date.strftime('%Y-%m-%d %H:%M:%S')  # to your preferred string format
+        distance = activity.get('distance', 'N/A')
+        moving_time = activity.get('moving_time', 'N/A')
+        average_speed = activity.get('average_speed', 'N/A')
+        type_ = activity.get('type', 'N/A')
+        messages.append(f"Activity 1: {formatted_date} : {activity['name']} | Distance: {distance} meters | Moving Time: {moving_time // 60} minutes and {moving_time % 60} seconds | Average Speed: {average_speed} m/s | Type: {type_}")
+        messages.append('')
+
+        # Get previously used model_choice from session
+        #model_choice = session.get('model_choice')
+        # Get previously used model_choice from session, default to 'gpt-3.5-turbo'
+        model_choice = session.get('model_choice', 'gpt-3.5-turbo')
+
+        # Go get chatGPT data
+        gpt_fact, chatgpt_time = get_chatgpt_fact(distance, model_choice, OPENAI_SECRET_KEY)
+        messages.append(f"{model_choice.capitalize()} fact: {gpt_fact}")
+        logging_messages.append(f'Successfully fetched chatGPT fact using model: {model_choice}')
+
+        # Prepare the HTML and Bootstrap template
+        map_file = None
+        zillow_return_1 = get_zillow_info_1(ZILLOW_SERVER_TOKEN, summary_polyline)
+        zillow_return_2 = get_zillow_info_2(ZILLOW_SERVER_TOKEN, summary_polyline)
+
+        map_file, _ = generate_map(summary_polyline)
+        logging_messages.append('Generated Google map from activity polyline')
+        logging_messages.append(f'Fetched Zillow data using polyline: return 1: {zillow_return_1}, return 2: {zillow_return_2}')
+
+        # Store the processed activity details in session
+        session["activities"] = [activity]
+        session['activity_id'] = activity_id
+        session['summary_polyline'] = summary_polyline
+        session['map_file'] = map_file
+        session['messages'] = messages
+        session['logging_messages'] = logging_messages
+        session['zillow_return_1'] = zillow_return_1
+        session['zillow_return_2'] = zillow_return_2
+
+    except Exception as e:
+        print(f"Error occurred while processing activity: {str(e)}")
+        return str(e), 400
+
+    # Return a response
+    return render_template('response.html', messages=session['messages'], logging_messages=session['logging_messages'], activities=session['activities'], activity_id=session['activity_id'], summary_polyline=session['summary_polyline'], map_file=session['map_file'], zillow_return_1=session['zillow_return_1'], zillow_return_2=session['zillow_return_2'])
 # At this endpoint, after login, the client receives an auth code from Strava which we exchange 
 # for an access token that we can use to make requests to the Strava API. 
 @app.route('/exchange_token', methods=['GET'])

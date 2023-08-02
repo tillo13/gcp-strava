@@ -52,6 +52,32 @@ def internal_error(error):
 def map(map_name):
     return send_from_directory('/tmp', map_name)
 
+@app.route('/history')
+def history():
+
+  print("Before get_activities call, set activities to blank...")
+  activities = []
+  print("Attempt to get access token...")
+  access_token = session.get('access_token')
+  if access_token is None:
+    print("No access token found in session")
+    return redirect('/')
+  print("Access token:", access_token)
+
+  try: 
+    print("Before get_activities call, set activities to blank...")
+    activities = []
+    activities = strava_utils.get_activities(session['access_token'], 50)
+  except Exception as e:
+      print("Error getting activities from strava_util /history path: ", e)
+  print("After get_activities call...")
+
+  activity_ids = [activity['id'] for activity in activities]
+
+  logger.info(f"Fetched {len(activity_ids)} activity IDs: {activity_ids}")
+  logger.info(f"Rendering with activity_ids: {activity_ids}")  
+  return render_template('history.html', activity_ids=activity_ids)
+
 # Home endpoint to serve the login link for Strava
 @app.route('/', methods=['GET', 'POST'])
 def home():
@@ -61,6 +87,7 @@ def home():
 
     if request.method == 'POST':
         model_choice = request.form.get('model_choice')
+        logger.info(f"Model choice: {model_choice}")
         return redirect(f'/login?model_choice={model_choice}')
     
     # We use Jinja2's templating engine which comes with Flask. 
@@ -152,6 +179,7 @@ def exchange_token():
     model_choice=request.args.get('model_choice')
     strava_time = 0  # Initialize strava_time
     db_time = 0  # Initialize db_time
+    zillow_time = 0 # Initialize zillow_time
     #this is just the default messages on the response.html page
     messages = []
     #set values to put in the "logging tab"
@@ -235,7 +263,7 @@ def exchange_token():
         strava_time = strava_auth_end - strava_auth_start
 
         # Attempt to save tokens and user details in database
-        logging_messages.append('6. Query Database: Attempting...')
+        logging_messages.append('6. Query GCP Postgres: Attempting...')
 
         # Timestamp before database process starts
         db_start = time.time() 
@@ -254,11 +282,12 @@ def exchange_token():
             db_end = time.time()
             # Store DB operation time in a variable.
             db_time = db_end - db_start
-            logging_messages.append(f'7. Save to Database: Success! pk_id = {pk_id}, and total_refresh_checks={total_refresh_checks}')  
+            logging_messages.append(f'7. Save to GCP Database: Success! pk_id = {pk_id}, and total_refresh_checks={total_refresh_checks}')  
 
             # fetch the activities
             try:
-                activities = strava_utils.get_activities(access_token)
+                #for this first query, just get the latest 1
+                activities = strava_utils.get_activities(access_token,1)
             except Exception as e:
                 # Handle any exceptions that arise from fetching the activities
                 messages.append(f"Error occurred while fetching activities: {str(e)}")
@@ -292,9 +321,16 @@ def exchange_token():
 
             # Prepare the HTML and Bootstrap template
             map_file = None
+            # Timestamp before Zillow process starts
+            zillow_start = time.time()
+
             zillow_return_1 = None
             zillow_return_2 = None
             try:
+                #generate the google map file: 
+                map_file, _ = generate_map(summary_polyline)
+                
+                #generate the zillow lists
                 zillow_return_1 = get_zillow_info_1(ZILLOW_SERVER_TOKEN, summary_polyline)
                 zillow_return_2 = get_zillow_info_2(ZILLOW_SERVER_TOKEN, summary_polyline)
                 session['zillow_return_1'] = zillow_return_1
@@ -305,6 +341,12 @@ def exchange_token():
 
             app.logger.info(f"zillow_return_1: {zillow_return_1}")
             app.logger.info(f"zillow_return_2: {zillow_return_2}")
+
+            # Timestamp right after Zillow process
+            zillow_end = time.time()
+            zillow_time = zillow_end - zillow_start
+            logging_messages.append(f'8. Query Zillow: Success! (Zillow process took {zillow_time} seconds)')
+
             return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id, summary_polyline=summary_polyline, map_file=map_file, zillow_return_1=zillow_return_1, zillow_return_2=zillow_return_2)
 
     except requests.exceptions.Timeout:
@@ -331,6 +373,7 @@ def exchange_token():
                 f'Strava: {round(strava_time, 3)} seconds.',
                 f'Google Cloud SQL: {round(db_time, 3)} seconds.',
                 f'OpenAI/ChatGPT: {round(chatgpt_time, 3)} seconds.',
+                f'Zillow: {round(zillow_time, 3)} seconds.', 
                 f'Total time: {round(time.time() - start_time, 3)} seconds.',
             ]
             

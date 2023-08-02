@@ -28,7 +28,7 @@ def get_zillow_info_2(access_token, encoded_polyline):
     if encoded_polyline and encoded_polyline.strip():
         decoded_polyline = polyline.decode(encoded_polyline)
 
-        url = f"https://api.bridgedataoutput.com/api/v2/zestimates_v2/zestimates?access_token={access_token}&limit=10&near={decoded_polyline[0][1]},{decoded_polyline[0][0]}&radius=100"
+        url = f"https://api.bridgedataoutput.com/api/v2/zestimates_v2/zestimates?access_token={access_token}&limit=5&near={decoded_polyline[0][1]},{decoded_polyline[0][0]}&radius=20000"
         response = requests.get(url)
 
         if response.status_code == 200:

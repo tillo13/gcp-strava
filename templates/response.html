@@ -1,7 +1,7 @@
 {% extends "default.html" %}
 
 {% block content %}
-    <h3>Strava + chatGPT + Strava ID: {{activity_id}}</h3>
+    <h3>Strava + AI + Strava ID: {{activity_id}}</h3>
 
     <hr />
     <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
@@ -9,13 +9,16 @@
             <a class="nav-link active" id="analysis-tab" data-toggle="pill" href="#analysis" role="tab" aria-controls="analysis" aria-selected="true">Analysis</a>
         </li>
         <li class="nav-item" role="presentation">
-            <a class="nav-link" id="logging-tab" data-toggle="pill" href="#logging" role="tab" aria-controls="logging" aria-selected="false">Logging</a>
-        </li>
-        <li class="nav-item" role="presentation">
             <a class="nav-link" id="map-tab" data-toggle="pill" href="#map" role="tab" aria-controls="map" aria-selected="false">Map</a>
         </li>
         <li class="nav-item" role="presentation">
             <a class="nav-link" id="zillow-tab" data-toggle="pill" href="#zillow" role="tab" aria-controls="zillow" aria-selected="false">Zillow</a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a href="/history">History</a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" id="logging-tab" data-toggle="pill" href="#logging" role="tab" aria-controls="logging" aria-selected="false">Logging</a>
         </li>
     </ul>
     <div class="tab-content" id="pills-tabContent">
@@ -24,7 +27,7 @@
 
             <!-- Welcome message -->
             <div class="mb-3">
-                <p><em>After fetching your latest Strava activity, we asked</em> <strong>chatGPT</strong>, <em>an AI engine, to transform the</em> <strong>DISTANCE</strong> <em>you covered into two random global coordinates about that distance apart. The result? Two spots on the planet and an intriguing fact about each...</em></p>
+                <p><em>After fetching your latest Strava activity, we asked</em> <strong>chatGPT</strong>, <em>an AI engine, to transform the</em> <strong>DISTANCE</strong> <em>you covered into two random global coordinates about that distance apart. The result? Two spots on the planet and an intriguing fact about each.  Plus added some Google Maps and Zillow real-estate bits along the way if your activity has a polyline!</em></p>
             </div>
 
             <!-- Strava activity card -->
@@ -58,20 +61,6 @@
                 </div>
             </div>
         </div>
-
-        <div class="tab-pane fade" id="logging" role="tabpanel" aria-labelledby="logging-tab">
-            <dl class="row">
-                {% for message in logging_messages %}
-                    {% if ':' in message %}
-                        <dt class="col-md-3">{{ message.split(":")[0]|safe }}:</dt>
-                        <dd class="col-md-9">{{ message.split(":")[1:]|join(':')|safe }}</dd>
-                    {% else %}
-                        <dt class="col-md-12"><strong>{{ message|safe }}</strong></dt>
-                    {% endif %}
-                {% endfor %}
-            </dl>
-        </div>
-
         <div class="tab-pane fade" id="map" role="tabpanel" aria-labelledby="map-tab">
             <p>Your activity in Google Maps...</p>
             {% if summary_polyline != "N/A" %}
@@ -88,10 +77,48 @@
             <pre>{{ activities | tojson(4) }}</pre>
         </div>
         <div class="tab-pane fade" id="zillow" role="tabpanel" aria-labelledby="zillow-tab">
-            <p>Result from the Zillow API...</p>
+            <h5>Polyline only results from the Zillow API...</h5>
             <pre>{{ zillow_return_1 }}</pre>
-            <p>Second Result from the Zillow API...</p>
+                {% if zillow_return_1['bundle'] %}
+                {% for item in zillow_return_1['bundle'] %}
+                    <p><strong>Zillow URL:</strong> <a href="{{ item['zillowUrl'] }}" target="_blank">{{ item['zillowUrl'] }}</a></p>
+                    <p><strong>Address:</strong> {{ item['address'] }}</p>
+                    <p><strong>Zestimate:</strong> ${{ item['zestimate'] }}</p>
+                    <hr>
+                {% endfor %}
+            {% else %}
+                <p>No data</p>
+            {% endif %}
+            
+            <h5>Single Lat/Long within 25k(test) mile radius Zillow API (5 results)...</h5>
             <pre>{{ zillow_return_2 }}</pre>
+            {% if zillow_return_2['bundle'] %}
+                {% for item in zillow_return_2['bundle'] %}
+                    <p><strong>Zillow URL:</strong> <a href="{{ item['zillowUrl'] }}" target="_blank">{{ item['zillowUrl'] }}</a></p>
+                    <p><strong>Address:</strong> {{ item['address'] }}</p>
+                    <p><strong>Zestimate:</strong> ${{ item['zestimate'] }}</p>
+                    <p><strong>Distance From Lat/Long:</strong> {{ item['distanceFrom'] }} miles</p>
+                    <hr>
+                {% endfor %}
+            {% else %}
+                <p>No data</p>
+            {% endif %}
+        </div>
+        <div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
+            <h3>Recent Activity IDs</h3>
+              <pre>{{ activity_ids }} </pre>
+        </div>
+        <div class="tab-pane fade" id="logging" role="tabpanel" aria-labelledby="logging-tab">
+            <dl class="row">
+                {% for message in logging_messages %}
+                    {% if ':' in message %}
+                        <dt class="col-md-3">{{ message.split(":")[0]|safe }}:</dt>
+                        <dd class="col-md-9">{{ message.split(":")[1:]|join(':')|safe }}</dd>
+                    {% else %}
+                        <dt class="col-md-12"><strong>{{ message|safe }}</strong></dt>
+                    {% endif %}
+                {% endfor %}
+            </dl>
         </div>
     </div>
 {% endblock %}

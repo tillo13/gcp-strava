@@ -1,14 +1,23 @@
 import requests
+import logging
 from config import STRAVA_TOKEN_URL, STRAVA_ACTIVITY_URL
 
-def get_activities(access_token):
+# Configures logging to information level which will display detailed logs
+logging.basicConfig()
+logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+#initialize logger
+logger = logging.getLogger(__name__)
+
+def get_activities(access_token, activities_per_page):
+    logger.info(f"Requesting activities from Strava API...")
+
     # Use STRAVA_ACTIVITY_URL from config
     url = STRAVA_ACTIVITY_URL
     headers = {
         'Authorization': f'Bearer {access_token}'
     }
     params = {
-        'per_page': 1,  # Number of activities per page
+        'per_page': activities_per_page,  # Number of activities per page
         'page': 1       # Page number
     }
 

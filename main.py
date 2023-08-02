@@ -52,7 +52,7 @@ def internal_error(error):
 def map(map_name):
     return send_from_directory('/tmp', map_name)
 
-@app.route('/history')
+@app.route('/history', methods=['GET'])
 def history():
 
   print("Before get_activities call, set activities to blank...")

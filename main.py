@@ -2,14 +2,10 @@
 from flask import Flask, request, redirect, Markup, render_template, redirect, url_for, session, send_from_directory  # Flask for building web application
 import requests                                                        # For making HTTP requests to Stava API
 import psycopg2                                                        # PostgresSQL library for handling database operations
-import sqlalchemy
 from sqlalchemy import text                          # SQLAlchemy for ORM   
 import logging                                                         # For logging information in the application
 import time                                                             # to calculate and display time-based information
-import json                                                            # For handling JSON data
 from dateutil.parser import parse                                      # For parsing dates and times from stings 
-from psycopg2 import OperationalError
-from threading import Thread
 from queue import Queue
 from map_ride import generate_map
 from google.cloud import secretmanager

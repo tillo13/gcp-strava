@@ -40,9 +40,23 @@ def get_activities(access_token, activities_per_page):
     # Making a GET request to Strava API to fetch activities
     response = requests.get(url, headers=headers, params=params)
 
-    # Return activities as json
+    # Return activities as json for the FULL JSON
     activities = response.json()
-    return activities
+    #return activities # if you want the full json
+    # extract summary 
+    summaries = []
+    for activity in activities:
+        summary = {}
+        summary['id'] = activity['id']  
+        summary['name'] = activity['name']
+        summary['distance'] = activity['distance']
+        summary['moving_time'] = activity['moving_time']
+        summary['average_speed'] = activity['average_speed']
+        summary['type'] = activity['type']
+        summary['start_date_local'] = activity['start_date_local']
+        summary['map'] = activity['map']
+        summaries.append(summary)
+    return summaries
 
 def get_athlete_profile(access_token):
     url = "https://www.strava.com/api/v3/athlete"

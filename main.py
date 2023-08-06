@@ -10,6 +10,8 @@ from queue import Queue
 from map_ride import generate_map
 from google.cloud import secretmanager
 from process_activity import process_activity
+#for stava_utlis.py import of only specific fields
+from collections import namedtuple 
 
 #initialize logger
 logger = logging.getLogger(__name__)
@@ -174,9 +176,24 @@ def activity_process():
     if not access_token:
         return "No access token found in session", 400
 
-    messages, map_file, summary_polyline, zillow_return_1, zillow_return_2, logging_messages, strava_time, chatgpt_time, zillow_time, activity = process_activity(access_token, "gpt-3.5-turbo", activity_id)
+    # Initialize to previous session value or any default value...
+    messages = session.get('messages', None)
+    map_file = session.get('map_file', None)
+    summary_polyline = session.get('summary_polyline', None)
+    zillow_return_1 = session.get('zillow_return_1', None)
+    zillow_return_2 = session.get('zillow_return_2', None)
+    logging_messages = session.get('logging_messages', None)
+    strava_time = 0  # Initialize strava_time
+    chatgpt_time = 0  # Initialize chatgpt_time
+    zillow_time = 0  # Initialize zillow_time
+    activity = None  # Initialize activity
 
-    session["activities"] = [activity]
+    try:
+        messages, map_file, summary_polyline, zillow_return_1, zillow_return_2, logging_messages, strava_time, chatgpt_time, zillow_time, activity = process_activity(access_token, "gpt-3.5-turbo", activity_id)
+    except Exception as err:
+        print(f"Error in process_activity: {err}")
+
+    session["activities"] = [{'id': activity['id'], 'name': activity['name']}] if activity else None
     session['activity_id'] = activity_id
     session['summary_polyline'] = summary_polyline
     session['map_file'] = map_file
@@ -185,8 +202,15 @@ def activity_process():
     session['zillow_return_1'] = zillow_return_1
     session['zillow_return_2'] = zillow_return_2
 
-    return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=session["activities"], activity_id=session["activity_id"], summary_polyline=session["summary_polyline"], map_file=session["map_file"], zillow_return_1=session['zillow_return_1'], zillow_return_2=session["zillow_return_2"])
-
+    return render_template('response.html', 
+                           messages=messages, 
+                           logging_messages=logging_messages, 
+                           activities=session["activities"], 
+                           activity_id=session["activity_id"], 
+                           summary_polyline=session["summary_polyline"], 
+                           map_file=session["map_file"], 
+                           zillow_return_1=session['zillow_return_1'], 
+                           zillow_return_2=session["zillow_return_2"])
 
 
 # At this endpoint, after login, the client receives an auth code from Strava which we exchange 
@@ -194,16 +218,25 @@ def activity_process():
 @app.route('/exchange_token', methods=['GET'])
 def exchange_token():
     start_time = time.time()
+
+    #Initialize to None or any default value...
+    messages = None
+    map_file = None
+    summary_polyline = None
+    zillow_return_1 = None
+    zillow_return_2 = None
+    strava_time = 0 
+    db_time = 0  
+    zillow_time = 0 
+    error_message = None 
+
     data = {}  # Initialize data as an empty dictionary
     model_choice=request.args.get('model_choice')
-    strava_time = 0  # Initialize strava_time
-    db_time = 0  # Initialize db_time
-    zillow_time = 0 # Initialize zillow_time
+
     #this is just the default messages on the response.html page
     messages = []
     #set values to put in the "logging tab"
     logging_messages = []
-    error_message = None # Initialize an error message variable    
 
     # Check if the 'error' is in the request arguments
     if 'error' in request.args:
@@ -307,6 +340,7 @@ def exchange_token():
             try:
                 #for this first query, just get the latest 1
                 activities = strava_utils.get_activities(access_token,1)
+                app.logger.info(f"Activities: {activities}")
             except Exception as e:
                 # Handle any exceptions that arise from fetching the activities
                 messages.append(f"Error occurred while fetching activities: {str(e)}")
@@ -318,6 +352,7 @@ def exchange_token():
             chatgpt_time = 0  # Initialize chatgpt_time
             messages.append('Your latest Strava activity...')
             for num, activity in enumerate(activities, 1):
+                logging_messages.append(f"Processing Activity {num}: {activity}")
                 activity_id = activity['id'] 
                 summary_polyline = activity['map'].get('summary_polyline', 'N/A')
                 date = parse(activity['start_date_local'])  # parses to datetime
@@ -333,6 +368,7 @@ def exchange_token():
                 # go get chatGPT data
                 try:
                     gpt_fact, chatgpt_time = get_chatgpt_fact(distance, model_choice, OPENAI_SECRET_KEY)
+                    logging_messages.append(f"ChatGPT fact: {gpt_fact}")
                     messages.append(f"{model_choice.capitalize()} fact: {gpt_fact}")
                 except Exception as e:
                     print(f"Failed to get chatGPT fact. Error: {e}")
@@ -367,6 +403,7 @@ def exchange_token():
             logging_messages.append(f'8. Query Zillow: Success! (Zillow process took {zillow_time} seconds)')
 
             return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id, summary_polyline=summary_polyline, map_file=map_file, zillow_return_1=zillow_return_1, zillow_return_2=zillow_return_2)
+        
 
     except requests.exceptions.Timeout:
         # If the request to Strava API times out
@@ -403,9 +440,9 @@ def exchange_token():
             session['activity_id'] = activity_id
             session['summary_polyline'] = summary_polyline
             session['map_file'] = map_file
+            app.logger.info(f"Messages at end of /exchange_token: {messages}")
             return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id,summary_polyline=summary_polyline,map_file=map_file, zillow_return_1=zillow_return_1, zillow_return_2=zillow_return_2)
-
-            
+                    
         else:
             return error_message
 

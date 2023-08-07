@@ -8,6 +8,26 @@ logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 #initialize logger
 logger = logging.getLogger(__name__)
 
+def get_access_token(client_id, client_secret, code):
+    url = STRAVA_TOKEN_URL
+    payload = {
+        'client_id': client_id,
+        'client_secret': client_secret,
+        'code': code,
+        'grant_type': 'authorization_code'
+    }
+
+    response = requests.post(url, params=payload)
+
+    # Parsing JSON response data
+    data = response.json()
+
+    # Check if the request was successful
+    if response.status_code != 200:
+        raise requests.exceptions.RequestException(data)
+
+    return data
+
 def get_activity_by_id(access_token, activity_id):
     logger.info(f"Fetching activity {activity_id} from the Strava API...")
 

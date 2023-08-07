@@ -1,4 +1,4 @@
-# 2023aug2 445pm
+# 2023aug6 445pm
 from flask import Flask, request, redirect, Markup, render_template, redirect, url_for, session, send_from_directory  # Flask for building web application
 import requests                                                        # For making HTTP requests to Stava API
 import psycopg2                                                        # PostgresSQL library for handling database operations
@@ -65,7 +65,7 @@ def history():
     try: 
         print("Before get_activities call, set activities to blank...")
         activities = []
-        activities = strava_utils.get_activities(session['access_token'], 50)
+        activities = strava_utils.get_activities(session['access_token'], 200)
     except Exception as e:
         print("Error getting activities from strava_util /history path: ", e)
     print("After get_activities call...")
@@ -146,7 +146,11 @@ def login():
         "scope": "read_all,profile:read_all,activity:read_all,activity:write"
     } 
     url = "https://www.strava.com/oauth/authorize"
-    r = requests.Request('GET', url, params=params).prepare()
+    try:
+        r = requests.Request('GET', url, params=params).prepare()
+        app.logger.info('Strava authorize URL invoked successfully.')
+    except Exception as e: 
+        app.logger.error(f"Strava authorization URL invocation failed with exception: {e}")
     return redirect(r.url)
 
 #this is the static version of the response after connect with strava
@@ -259,7 +263,7 @@ def exchange_token():
 
         # Process the 'code' to get access and refresh tokens
         try:
-            data = strava_utils.process_auth_code(STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, code)
+            data = strava_utils.get_access_token(STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, code)
             # The session is a secure place to store information between requests. 
             # When a user successfully authenticates, set session['authenticated'] to True.
             if 'access_token' in data:
@@ -344,6 +348,7 @@ def exchange_token():
             except Exception as e:
                 # Handle any exceptions that arise from fetching the activities
                 messages.append(f"Error occurred while fetching activities: {str(e)}")
+                app.logger.error(f"Error occurred while fetching activities: {str(e)}")
                 return '<br>'.join(messages)
 
             # Once we have the response, we can go through each activity and print the details

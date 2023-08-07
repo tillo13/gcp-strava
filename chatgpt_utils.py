@@ -11,7 +11,7 @@ def get_chatgpt_fact(distance, model_choice, openai_secret_key):
 def get_fact_for_distance(distance, incoming_model, openai_secret_key):
     openai.api_key = openai_secret_key
 
-    prompt = f"I need two points in the world that are apprximately {distance} meters apart.  It does not have to be cities.  The more obscure the points, the better, but the distance apart must be close to exact.In your response convert meters to miles and start your response with that conversion, like this as an example (2200 meters = 1.367miles). Then give me an interesting fact about both points."
+    prompt = f"I need two points in the world that are apprximately {distance} meters apart.  It does not have to be cities.  The more obscure the points, the better, but the distance apart must be close to exact.In your response convert meters to miles and start your response with that conversion, like this as an example (2200 meters = 1.367miles). Then give me an interesting fact about both points.  Keep the response simple, the fewer characters in the response the better."
 
     if incoming_model == "gpt-3.5-turbo":
         messages=[

@@ -94,7 +94,7 @@ def get_athlete_profile(access_token):
 
     # New Logging Message
     username = athlete_profile.get('username', 'username_not_found')
-    logger.info(f"Profile tab accessed by: {username}")
+    logger.info(f"Athlete profile gathered: {username}")
 
     return athlete_profile
 

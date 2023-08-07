@@ -89,18 +89,33 @@ def get_athlete_profile(access_token):
         print(f"Reason: {response.reason}")
         print(f"Content: {response.content}")
         raise Exception('Failed to fetch athlete profile')
-    return response.json()
+
+    athlete_profile = response.json()
+
+    # New Logging Message
+    username = athlete_profile.get('username', 'username_not_found')
+    logger.info(f"Profile tab accessed by: {username}")
+
+    return athlete_profile
 
 def deauthorize(access_token):
     url = "https://www.strava.com/oauth/deauthorize"
     headers = {
         'Authorization': f'Bearer {access_token}'
     }
+    
+    # Get user profile details before deauthorization
+    profile = get_athlete_profile(access_token)
+    username = profile['username']
+    user_id = profile['id']
+    
     response = requests.post(url, headers=headers)
 
     if response.status_code != 200:
         raise Exception(f"Failed to deauthorize the user: {response.content}")
-
+   
+    # Log user logout message 
+    logger.info(f"User logged out: {username}, UserId: {user_id}")
     return response.json()
 
 def process_auth_code(client_id, client_secret, code):
@@ -122,5 +137,16 @@ def process_auth_code(client_id, client_secret, code):
     # Check if the request was successful
     if response.status_code != 200:
         raise requests.exceptions.RequestException(data)
+
+    # Get access token from response
+    access_token = data['access_token']
+
+    # Fetch user's profile
+    profile = get_athlete_profile(access_token)
+    username = profile.get('username', 'username_not_found')
+    user_id = profile.get('id', 'id_not_found')
+
+    # Log user login message 
+    logger.info(f"User logged in: {username}, UserId: {user_id}")
 
     return data

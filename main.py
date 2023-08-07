@@ -374,7 +374,12 @@ def exchange_token():
                 app.logger.info(f"Session before processing activity in /exchange_token: {session}")
                 logging_messages.append(f"Processing Activity {num}: {activity}")
                 activity_id = activity['id'] 
-                summary_polyline = activity['map'].get('summary_polyline', 'N/A')
+
+                #removing the summary polyline from this as it duplicates and is already stored, so we'll just remove it first, but then also make sure it's not in.
+                #summary_polyline = activity['map'].get('summary_polyline', 'N/A')
+                if 'summary_polyline' in activity['map']:
+                    del activity['map']['summary_polyline']
+
                 date = parse(activity['start_date_local'])  # parses to datetime
                 formatted_date = date.strftime('%Y-%m-%d %H:%M:%S')  # to your preferred string format
                 distance = activity.get('distance', 'N/A')

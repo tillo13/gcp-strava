@@ -1,4 +1,4 @@
-# 2023aug6 445pm
+# 2023aug2 445pm
 from flask import Flask, request, redirect, Markup, render_template, redirect, url_for, session, send_from_directory  # Flask for building web application
 import requests                                                        # For making HTTP requests to Stava API
 import psycopg2                                                        # PostgresSQL library for handling database operations
@@ -6,6 +6,8 @@ from sqlalchemy import text                          # SQLAlchemy for ORM
 import logging                                                         # For logging information in the application
 import time                                                             # to calculate and display time-based information
 from dateutil.parser import parse                                      # For parsing dates and times from stings 
+import json
+import sys
 from queue import Queue
 from map_ride import generate_map
 from google.cloud import secretmanager
@@ -65,7 +67,7 @@ def history():
     try: 
         print("Before get_activities call, set activities to blank...")
         activities = []
-        activities = strava_utils.get_activities(session['access_token'], 200)
+        activities = strava_utils.get_activities(session['access_token'], 20)
     except Exception as e:
         print("Error getting activities from strava_util /history path: ", e)
     print("After get_activities call...")
@@ -146,11 +148,7 @@ def login():
         "scope": "read_all,profile:read_all,activity:read_all,activity:write"
     } 
     url = "https://www.strava.com/oauth/authorize"
-    try:
-        r = requests.Request('GET', url, params=params).prepare()
-        app.logger.info('Strava authorize URL invoked successfully.')
-    except Exception as e: 
-        app.logger.error(f"Strava authorization URL invocation failed with exception: {e}")
+    r = requests.Request('GET', url, params=params).prepare()
     return redirect(r.url)
 
 #this is the static version of the response after connect with strava
@@ -205,6 +203,20 @@ def activity_process():
     session['logging_messages'] = logging_messages
     session['zillow_return_1'] = zillow_return_1
     session['zillow_return_2'] = zillow_return_2
+
+    #count and show the size of the session as it can't be more than 4093bytes
+    # Convert the Flask session object to a dictionary.
+    session_dict = dict(session)
+
+    # Then serialize that dictionary to a JSON string.
+    session_json = json.dumps(session_dict)
+
+    # Then, calculate the size of the JSON string.
+    session_size = len(session_json.encode('utf-8'))  # This will give you the size in bytes
+
+    app.logger.info(f"Size of session after storage in /activity_process: {session_size} bytes")
+    app.logger.info(f"Session after storage in /activity_process: {session}")
+
 
     return render_template('response.html', 
                            messages=messages, 
@@ -263,7 +275,7 @@ def exchange_token():
 
         # Process the 'code' to get access and refresh tokens
         try:
-            data = strava_utils.get_access_token(STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, code)
+            data = strava_utils.process_auth_code(STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, code)
             # The session is a secure place to store information between requests. 
             # When a user successfully authenticates, set session['authenticated'] to True.
             if 'access_token' in data:
@@ -272,6 +284,7 @@ def exchange_token():
                 # store the athlete_id in the session
                 athlete_id = data['athlete']['id']
                 session['athlete_id'] = athlete_id
+            app.logger.info(f"Session after creation in /exchange_token: {session}")
         except requests.exceptions.RequestException as e:
             return f"Error occurred while processing the code: {str(e)}."
 
@@ -345,10 +358,11 @@ def exchange_token():
                 #for this first query, just get the latest 1
                 activities = strava_utils.get_activities(access_token,1)
                 app.logger.info(f"Activities: {activities}")
+                app.logger.info(f"Session after get_activities call in /exchange_token: {session}")
+
             except Exception as e:
                 # Handle any exceptions that arise from fetching the activities
                 messages.append(f"Error occurred while fetching activities: {str(e)}")
-                app.logger.error(f"Error occurred while fetching activities: {str(e)}")
                 return '<br>'.join(messages)
 
             # Once we have the response, we can go through each activity and print the details
@@ -357,6 +371,7 @@ def exchange_token():
             chatgpt_time = 0  # Initialize chatgpt_time
             messages.append('Your latest Strava activity...')
             for num, activity in enumerate(activities, 1):
+                app.logger.info(f"Session before processing activity in /exchange_token: {session}")
                 logging_messages.append(f"Processing Activity {num}: {activity}")
                 activity_id = activity['id'] 
                 summary_polyline = activity['map'].get('summary_polyline', 'N/A')
@@ -406,6 +421,20 @@ def exchange_token():
             zillow_end = time.time()
             zillow_time = zillow_end - zillow_start
             logging_messages.append(f'8. Query Zillow: Success! (Zillow process took {zillow_time} seconds)')
+            
+            #count and show the size of the session as it can't be more than 4093bytes
+            # Convert the Flask session object to a dictionary.
+            session_dict = dict(session)
+
+            # Then serialize that dictionary to a JSON string.
+            session_json = json.dumps(session_dict)
+
+            # Then, calculate the size of the JSON string.
+            session_size = len(session_json.encode('utf-8'))  # This will give you the size in bytes
+
+            app.logger.info(f"Size of session after processing activity in /exchange_token: {session_size} bytes")
+            app.logger.info(f"Session after processing activity in /exchange_token: {session}")
+
 
             return render_template('response.html', messages=messages, logging_messages=logging_messages, activities=activities, activity_id=activity_id, summary_polyline=summary_polyline, map_file=map_file, zillow_return_1=zillow_return_1, zillow_return_2=zillow_return_2)
         

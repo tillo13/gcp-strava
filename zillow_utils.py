@@ -20,9 +20,18 @@ def get_zillow_info_1(access_token, encoded_polyline):
 
         if response.status_code == 200:
             logger.info(f"Zillow query 1: {url}")
-            return response.json()
+            
+            # Extract only the required fields from the response data
+            data = response.json()
+            data['bundle'] = [
+                {'zillowUrl': item['zillowUrl'], 'address': item['address'], 'zestimate': item['zestimate'], 'distanceFrom': item['distanceFrom']}
+                for item in data.get('bundle', [])
+            ]
+            
+            return data
         else:
             return None
+
 
 def get_zillow_info_2(access_token, encoded_polyline):
     if encoded_polyline and encoded_polyline.strip():
@@ -33,6 +42,14 @@ def get_zillow_info_2(access_token, encoded_polyline):
 
         if response.status_code == 200:
             logger.info(f"Zillow query 2: {url}")
-            return response.json()
+            
+            # Extract only the required fields from the response data
+            data = response.json()
+            data['bundle'] = [
+                {'zillowUrl': item['zillowUrl'], 'address': item['address'], 'zestimate': item['zestimate'], 'distanceFrom': item['distanceFrom']}
+                for item in data.get('bundle', [])
+            ]
+
+            return data
         else:
             return None

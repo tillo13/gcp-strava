@@ -54,7 +54,7 @@ def admin():
     if 'authenticated' in session and session['authenticated']:
         athlete_id = session.get('athlete_id', None)
         if athlete_id == 18443678:    # Add Check for specific athlete ID
-            print("Admin tab accessed...")
+            print("Admin tab accesse by" + [athlete_id] +"...")
             # Create a connection
             engine = create_conn()
             if isinstance(engine, str):     # If could not create engine (error message is returned)

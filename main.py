@@ -49,6 +49,28 @@ app.secret_key = 'super duper secret key'  # super duper secret cause Flask want
 def internal_error(error):
     return redirect(SITE_HOMEPAGE)
 
+@app.route('/admin', methods=['GET'])
+def admin():
+    if 'authenticated' in session and session['authenticated']:
+        athlete_id = session.get('athlete_id', None)
+        if athlete_id == 18443678:    # Add Check for specific athlete ID
+            print("Admin tab accessed...")
+            # Create a connection
+            engine = create_conn()
+            if isinstance(engine, str):     # If could not create engine (error message is returned)
+                return engine
+            
+            # Connect to the database and execute a SQL query
+            with engine.begin() as connection:
+                # Get all records from strava_access_tokens table
+                result = connection.execute(text("SELECT * FROM strava_access_tokens"))
+                data = [row._asdict() for row in result]            
+            return render_template('admin.html', data=data)
+        else:
+            return redirect('/')
+    else:
+        return redirect('/')
+
 @app.route('/map/<map_name>', methods=['GET'])
 def map(map_name):
     return send_from_directory('/tmp', map_name)
@@ -201,8 +223,8 @@ def activity_process():
     session['map_file'] = map_file
     session['messages'] = messages
     session['logging_messages'] = logging_messages
-    session['zillow_return_1'] = zillow_return_1
-    session['zillow_return_2'] = zillow_return_2
+    #session['zillow_return_1'] = zillow_return_1
+    #session['zillow_return_2'] = zillow_return_2
 
     #count and show the size of the session as it can't be more than 4093bytes
     # Convert the Flask session object to a dictionary.
@@ -225,8 +247,8 @@ def activity_process():
                            activity_id=session["activity_id"], 
                            summary_polyline=session["summary_polyline"], 
                            map_file=session["map_file"], 
-                           zillow_return_1=session['zillow_return_1'], 
-                           zillow_return_2=session["zillow_return_2"])
+                           zillow_return_1=zillow_return_1, 
+                           zillow_return_2=zillow_return_2)
 
 
 # At this endpoint, after login, the client receives an auth code from Strava which we exchange 

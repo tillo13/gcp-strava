@@ -1,0 +1,42 @@
+{% extends "default.html" %}
+
+{% block content %}
+<script>
+    $(document).ready(function() { 
+        $("#strava_users").tablesorter(); 
+    }); 
+</script>
+    <h1>Admin Panel</h1>
+    <table class="table table-striped" id="strava_users">
+        <thead>
+            <tr>
+                <th>PK ID</th>
+                <th>Athlete ID</th>
+                <th>Expires At</th>
+                <th>Expires In</th>
+                <th>Last Updated</th>
+                <th>Total Refreshes</th>
+                <th>Total Refresh Checks</th>
+                <th>Created At</th>
+                <th>Last Refreshed By</th>
+                <th>Current Scope</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in data %}
+            <tr>
+                <td>{{ item.pk_id }}</td>
+                <td>{{ item.athlete_id }}</td>
+                <td>{{ item.expires_at }}</td>
+                <td>{{ item.expires_in }}</td>
+                <td>{{ item.last_updated }}</td>
+                <td>{{ item.total_refreshes }}</td>
+                <td>{{ item.total_refresh_checks }}</td>
+                <td>{{ item.created_at }}</td>
+                <td>{{ item.last_refreshed_by }}</td>
+                <td>{{ item.current_scope }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

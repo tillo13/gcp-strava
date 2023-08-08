@@ -10,6 +10,7 @@
     <table class="table table-striped" id="strava_users">
         <thead>
             <tr>
+                <th>Action</th>
                 <th>PK ID</th>
                 <th>Athlete ID</th>
                 <th>Expires At</th>
@@ -25,6 +26,7 @@
         <tbody>
             {% for item in data %}
             <tr>
+                <td><button class="btn btn-primary" onclick="alert('Selected Athlete ID: {{ item.athlete_id }}')">Select</button></td>
                 <td>{{ item.pk_id }}</td>
                 <td>{{ item.athlete_id }}</td>
                 <td>{{ item.expires_at }}</td>

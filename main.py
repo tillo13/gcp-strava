@@ -104,7 +104,7 @@ def history():
 # Home endpoint to serve the login link for Strava
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    message = ("We'll grab your most recent activity data from Strava, pass the distance to chatGPT, and provide some fun distance-related facts. "
+    notification = ("We'll grab your most recent activity data from Strava, pass the distance to chatGPT, and provide some fun distance-related facts. "
                "We don't save any of the data from the query; it's all stateless in this demo. "
                "This also means you'll most likely get a brand new fact each time you're here.")
 
@@ -114,7 +114,7 @@ def home():
         return redirect(f'/login?model_choice={model_choice}')
     
     # We use Jinja2's templating engine which comes with Flask. 
-    return render_template('home.html', message=message)
+    return render_template('home.html', notification=notification)
 
 @app.route('/deauthorize', methods=['POST'])
 def deauthorize():
@@ -178,7 +178,7 @@ def login():
 def activity():
     # Check if data exists in session
     if 'activity_id' not in session:
-        return render_template('error.html', message="No results found! Please try again.")
+        return render_template('error.html', notification="No results found! Please try again.")
 
     # Retrieve data from session
     messages = session['messages']
@@ -312,7 +312,7 @@ def exchange_token():
 
         # check if "code" processing was successful
         if "access_token" not in data:
-            return render_template('error.html', message="We couldn't process your request with the permissions provided. <br>Please start again and provide the necessary permissions.")
+            return render_template('error.html', notification="We couldn't process your request with the permissions provided. <br>Please start again and provide the necessary permissions.")
 
         # Get scope from the arguments
         scope = request.args.get('scope')
@@ -327,7 +327,7 @@ def exchange_token():
         if missing_permissions:
             error_message = "So to run as of 2023July10, we need at least these permissions: " + ', '.join(missing_permissions)
             error_message = Markup(f"{error_message}. <br>Feel free to uncheck the others for now.<br><br><a href='/'>Please start again</a> and provide the necessary permissions.")
-            return render_template('error.html', message=error_message)
+            return render_template('error.html', notification=error_message)
         
         access_token = data['access_token']
         refresh_token = data['refresh_token']
